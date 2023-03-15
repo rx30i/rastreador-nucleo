@@ -1,0 +1,1 @@
+{"version":3,"file":"geo-json-point.js","sourceRoot":"","sources":["../../src/helpers/geo-json-point.ts"],"names":[],"mappings":";;;AAEA,SAAgB,YAAY,CAAE,SAAiB,EAAE,QAAgB;IAC/D,OAAO,EAAE,IAAI,EAAE,OAAO,EAAE,WAAW,EAAE,CAAE,SAAS,EAAE,QAAQ,CAAE,EAAE,CAAC;AACjE,CAAC;AAFD,oCAEC"}
