@@ -1,2 +1,3 @@
-export { RespostaComandoEntity } from './resposta-comando.entity';
-export { ComandoUsuarioEntity } from './comando-usuario.entity';
+export * from './mensagem-conexao-fechada.entity';
+export * from './resposta-comando.entity';
+export * from './comando-usuario.entity';
