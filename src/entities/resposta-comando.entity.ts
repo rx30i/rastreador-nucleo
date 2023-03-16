@@ -1,3 +1,4 @@
+import { IRespostaComando } from 'src/contracts';
 import { ComandoStatus } from '../enums/comando-status';
 
 /**
@@ -13,15 +14,19 @@ import { ComandoStatus } from '../enums/comando-status';
  * ao rastreador ou um comando que não pode ser enviado ao rastreador.
  */
 export class RespostaComandoEntity {
-  public readonly identificador: string | null;
-  public readonly imei: string | null;
+  public readonly id: number;
+  public readonly pattern: string;
+  public readonly dataHora: string;
+  public readonly status: ComandoStatus;
+  public readonly identificador: string;
+  public readonly imei: string;
 
-  constructor (
-    public readonly id: number,
-    public readonly pattern: string,
-    public readonly dataHora: string,
-    public readonly status: ComandoStatus,
-  ) {}
+  constructor (objeto: IRespostaComando) {
+    this.id       = objeto.id;
+    this.pattern  = objeto.pattern;
+    this.dataHora = objeto.dataHora;
+    this.status   = objeto.status;
+  }
 
   public validar (): boolean {
     try {
@@ -41,8 +46,8 @@ export class RespostaComandoEntity {
       pattern: this.pattern,
       data   : {
         id           : this.id,
-        identificador: null,
-        imei         : null,
+        identificador: '',
+        imei         : '',
         dataHora     : this.dataHora,
         status       : this.status,
       },

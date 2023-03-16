@@ -2,11 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RespostaComandoEntity = void 0;
 class RespostaComandoEntity {
-    constructor(id, pattern, dataHora, status) {
-        this.id = id;
-        this.pattern = pattern;
-        this.dataHora = dataHora;
-        this.status = status;
+    constructor(objeto) {
+        this.id = objeto.id;
+        this.pattern = objeto.pattern;
+        this.dataHora = objeto.dataHora;
+        this.status = objeto.status;
     }
     validar() {
         try {
@@ -25,8 +25,8 @@ class RespostaComandoEntity {
             pattern: this.pattern,
             data: {
                 id: this.id,
-                identificador: null,
-                imei: null,
+                identificador: '',
+                imei: '',
                 dataHora: this.dataHora,
                 status: this.status,
             },

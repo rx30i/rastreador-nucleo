@@ -18,6 +18,7 @@ __exportStar(require("./i-mensagem-conexao-fechada"), exports);
 __exportStar(require("./i-consumer-deserializer"), exports);
 __exportStar(require("./i-servidor-tcp-config"), exports);
 __exportStar(require("./i-padrao-msg-nestjs"), exports);
+__exportStar(require("./i-resposta-comando"), exports);
 __exportStar(require("./i-geo-json-point"), exports);
 __exportStar(require("./i-socket"), exports);
 //# sourceMappingURL=index.js.map
