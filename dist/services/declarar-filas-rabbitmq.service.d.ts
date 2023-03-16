@@ -1,10 +1,11 @@
+import * as amqplib from 'amqplib';
 export declare class DeclararFilasRabbitMqService {
     private readonly rabbitMqFilaCmdPausa;
     private readonly rabbitMqFilaCmd;
     constructor(rabbitMqFilaCmdPausa: string, rabbitMqFilaCmd: string);
-    private declararExchange;
-    private declararQueue;
-    private bind;
+    declararExchange(channel: amqplib.Channel): Promise<void>;
+    declararQueue(channel: amqplib.Channel): Promise<void>;
+    bind(channel: amqplib.Channel): Promise<void>;
     private queueRastreadorErro;
     private queueRastreadorMensagem;
     private queueRastreadorMensagemPausa;

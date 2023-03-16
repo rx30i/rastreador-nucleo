@@ -8,13 +8,13 @@ export class DeclararFilasRabbitMqService {
     private readonly rabbitMqFilaCmd: string,
   ) {}
 
-  private async declararExchange (channel: amqplib.Channel): Promise<void> {
+  public async declararExchange (channel: amqplib.Channel): Promise<void> {
     await channel.assertExchange(
       'amq.direct', 'direct', {durable: true}
     );
   }
 
-  private async declararQueue (channel: amqplib.Channel): Promise<void> {
+  public async declararQueue (channel: amqplib.Channel): Promise<void> {
     await Promise.all([
       this.queueRastreadorErro(channel),
       this.queueRastreadorMensagem(channel),
@@ -24,7 +24,7 @@ export class DeclararFilasRabbitMqService {
     ]);
   }
 
-  private async bind (channel: amqplib.Channel): Promise<void> {
+  public async bind (channel: amqplib.Channel): Promise<void> {
     await Promise.all([
       channel.bindQueue('rastreador.mensagem.pausa', 'amq.direct', 'rastreador.mensagem.pausa'),
       channel.bindQueue('rastreador.mensagem', 'amq.direct', 'rastreador.mensagem'),
