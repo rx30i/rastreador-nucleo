@@ -1,5 +1,5 @@
-import { IRespostaComando } from 'src/contracts';
 import { ComandoStatus } from '../enums/comando-status';
+import { IRespostaComando } from '../contracts';
 
 /**
  * Para todo comando enviado pelo usuário é necessario retornar uma resposta, essa resposta

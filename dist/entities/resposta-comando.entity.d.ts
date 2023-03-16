@@ -1,5 +1,5 @@
-import { IRespostaComando } from 'src/contracts';
 import { ComandoStatus } from '../enums/comando-status';
+import { IRespostaComando } from '../contracts';
 export declare class RespostaComandoEntity {
     readonly id: number;
     readonly pattern: string;
