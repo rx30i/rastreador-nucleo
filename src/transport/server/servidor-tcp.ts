@@ -185,11 +185,17 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   }
 
   /**
+   * "read ECONNRESET" significa que o cliente encerrou abruptamente sua conexão.
+   *
    * @param {ISocket} socket
    * @returns {void}
    */
   private conexaoErro (socket: ISocket): void {
     socket.on('error', (error) => {
+      if (error.message === 'read ECONNRESET') {
+        this.clienteDesconectou(socket);
+      }
+
       if (error.message !== 'read ECONNRESET') {
         this.configuracao.tratarErro.error(
           'ServidorTcp', error.stack || error.message

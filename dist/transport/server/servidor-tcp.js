@@ -97,6 +97,9 @@ class ServidorTcp extends microservices_1.Server {
     }
     conexaoErro(socket) {
         socket.on('error', (error) => {
+            if (error.message === 'read ECONNRESET') {
+                this.clienteDesconectou(socket);
+            }
             if (error.message !== 'read ECONNRESET') {
                 this.configuracao.tratarErro.error('ServidorTcp', error.stack || error.message);
             }
