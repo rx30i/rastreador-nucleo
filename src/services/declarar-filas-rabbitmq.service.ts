@@ -21,14 +21,12 @@ export class DeclararFilasRabbitMqService {
       this.queueRastreadorMensagemPausa(channel),
       this.queueRastreadorCmd(channel),
       this.queueRastreadorCmdPausa(channel),
-      this.queueMensagemTempoReal(channel),
     ]);
   }
 
   public async bind (channel: amqplib.Channel): Promise<void> {
     await Promise.all([
       channel.bindQueue('rastreador.mensagem.pausa', 'amq.direct', 'rastreador.mensagem.pausa'),
-      channel.bindQueue('mensagens.tempo.real', 'amq.direct', 'rastreador.mensagem'),
       channel.bindQueue('rastreador.mensagem', 'amq.direct', 'rastreador.mensagem'),
       channel.bindQueue('rastreador.erro', 'amq.direct', 'rastreador.erro'),
       channel.bindQueue(this.rabbitMqFilaCmdPausa, 'amq.direct', this.rabbitMqFilaCmdPausa),
@@ -63,14 +61,6 @@ export class DeclararFilasRabbitMqService {
           'x-dead-letter-routing-key': 'rastreador.mensagem',
           'x-message-ttl'            : 60000,
         },
-      }
-    );
-  }
-
-  private queueMensagemTempoReal (channel: amqplib.Channel): Promise<AssertQueue> {
-    return channel.assertQueue(
-      'mensagens.tempo.real', {
-        durable: true,
       }
     );
   }

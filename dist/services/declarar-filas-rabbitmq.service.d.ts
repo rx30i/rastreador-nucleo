@@ -9,7 +9,6 @@ export declare class DeclararFilasRabbitMqService {
     private queueRastreadorErro;
     private queueRastreadorMensagem;
     private queueRastreadorMensagemPausa;
-    private queueMensagemTempoReal;
     private queueRastreadorCmd;
     private queueRastreadorCmdPausa;
 }
