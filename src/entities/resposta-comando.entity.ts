@@ -22,10 +22,12 @@ export class RespostaComandoEntity {
   public readonly imei: string;
 
   constructor (objeto: IRespostaComando) {
-    this.id       = objeto.id;
-    this.pattern  = objeto.pattern;
-    this.dataHora = objeto.dataHora;
-    this.status   = objeto.status;
+    this.id            = objeto.id;
+    this.pattern       = objeto.pattern;
+    this.imei          = objeto.imei,
+    this.dataHora      = objeto.dataHora;
+    this.status        = objeto.status;
+    this.identificador = objeto.identificador;
   }
 
   public validar (): boolean {
@@ -33,7 +35,9 @@ export class RespostaComandoEntity {
       this._checarInteiro(this.id);
       this._checarString(this.pattern);
       this._checarString(this.dataHora);
+      this._checarString(this.imei);
       this._checarString(this.status);
+      this._checarString(this.identificador);
 
       return true;
     } catch (erro) {
@@ -46,10 +50,10 @@ export class RespostaComandoEntity {
       pattern: this.pattern,
       data   : {
         id           : this.id,
-        identificador: '',
-        imei         : '',
+        imei         : this.imei,
         dataHora     : this.dataHora,
         status       : this.status,
+        identificador: this.identificador,
       },
     });
   }
