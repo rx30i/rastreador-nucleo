@@ -21,4 +21,5 @@ __exportStar(require("./i-padrao-msg-nestjs"), exports);
 __exportStar(require("./i-resposta-comando"), exports);
 __exportStar(require("./i-geo-json-point"), exports);
 __exportStar(require("./i-socket"), exports);
+__exportStar(require("./i-logger"), exports);
 //# sourceMappingURL=index.js.map

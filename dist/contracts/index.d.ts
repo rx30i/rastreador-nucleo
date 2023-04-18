@@ -5,3 +5,4 @@ export * from './i-padrao-msg-nestjs';
 export * from './i-resposta-comando';
 export * from './i-geo-json-point';
 export * from './i-socket';
+export * from './i-logger';
