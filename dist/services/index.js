@@ -14,6 +14,6 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+__exportStar(require("./enviar-comando-rastreador.service"), exports);
 __exportStar(require("./declarar-filas-rabbitmq.service"), exports);
-__exportStar(require("./enviar-comando.service"), exports);
 //# sourceMappingURL=index.js.map

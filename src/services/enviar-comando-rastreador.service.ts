@@ -14,7 +14,7 @@ import { ILoger } from '../contracts';
  * essa classe recebe as mensagens dessa fila, encaminha para o servidor TCP, esse encaminha para um
  * controller e esse controller envia esses comandos para os rastreadores correspondentes.
  */
-export class EnviarComandoService {
+export class EnviarComandoRastreadorService {
   private channel: Channel;
 
   /**

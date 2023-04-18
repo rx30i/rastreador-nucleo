@@ -2,7 +2,7 @@ import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { ClientProxy } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { ILoger } from '../contracts';
-export declare class EnviarComandoService {
+export declare class EnviarComandoRastreadorService {
     private readonly clientProxy;
     private readonly amqpConnection;
     private readonly configService;

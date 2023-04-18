@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EnviarComandoService = void 0;
+exports.EnviarComandoRastreadorService = void 0;
 const entities_1 = require("../entities");
 const promises_1 = require("node:timers/promises");
 const enums_1 = require("../enums");
 const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
-class EnviarComandoService {
+class EnviarComandoRastreadorService {
     constructor(clientProxy, amqpConnection, configService, logger) {
         this.clientProxy = clientProxy;
         this.amqpConnection = amqpConnection;
@@ -111,5 +111,5 @@ class EnviarComandoService {
         }
     }
 }
-exports.EnviarComandoService = EnviarComandoService;
-//# sourceMappingURL=enviar-comando.service.js.map
+exports.EnviarComandoRastreadorService = EnviarComandoRastreadorService;
+//# sourceMappingURL=enviar-comando-rastreador.service.js.map
