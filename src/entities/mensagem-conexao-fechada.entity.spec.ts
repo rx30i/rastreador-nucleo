@@ -61,8 +61,8 @@ describe('MensagemConexaoFechadaEntity', () => {
   });
 
   describe('Atributo pattern', () => {
-    it('Deve retornar a string conexao_fechada', () => {
-      expect(entidade01.pattern).toEqual('conexao_fechada');
+    it('Deve retornar a string conexaoFechada', () => {
+      expect(entidade01.pattern).toEqual('conexaoFechada');
     });
   });
 });
