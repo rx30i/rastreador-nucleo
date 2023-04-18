@@ -46,7 +46,7 @@ export class EnviarComandoService {
    *
    * @returns {Promise<void>}
    */
-  private async receberMsgRabbitMq (): Promise<void> {
+  public async receberMsgRabbitMq (): Promise<void> {
     const filaComandos = this.configService.get<string>('RABBITMQ_FILA_COMANDO');
     if (!filaComandos) {
       this.logger.error('Variável de ambiente "RABBITMQ_FILA_COMANDO" não foi declarada no .env ');

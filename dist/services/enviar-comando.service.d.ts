@@ -10,7 +10,7 @@ export declare class EnviarComandoService {
     private channel;
     private tentativasEnvio;
     constructor(clientProxy: ClientProxy, amqpConnection: AmqpConnection, configService: ConfigService, logger: ILoger);
-    private receberMsgRabbitMq;
+    receberMsgRabbitMq(): Promise<void>;
     private enviarComando;
     private finalizarMsg;
     private rejeitarMsg;
