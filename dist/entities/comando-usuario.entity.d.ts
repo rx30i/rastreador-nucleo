@@ -1,12 +1,12 @@
 interface IComandoUsuarioEntity {
-    readonly id: number;
+    readonly _id: string;
     readonly integracao: string;
     readonly identificador: string;
     readonly comando: string;
     readonly imei: string;
 }
 export declare class ComandoUsuarioEntity {
-    readonly id: number;
+    readonly _id: string;
     readonly integracao: string;
     readonly identificador: string;
     readonly comando: string;

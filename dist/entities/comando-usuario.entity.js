@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ComandoUsuarioEntity = void 0;
 class ComandoUsuarioEntity {
     constructor(dados) {
-        this.id = dados.id;
+        this._id = dados._id;
         this.integracao = dados.integracao;
         this.identificador = dados.identificador;
         this.comando = dados.comando;
@@ -11,7 +11,7 @@ class ComandoUsuarioEntity {
     }
     valido() {
         try {
-            this._checarInteiro(this.id);
+            this._checarString(this._id);
             this._checarString(this.integracao);
             this._checarString(this.identificador);
             this._checarString(this.comando);

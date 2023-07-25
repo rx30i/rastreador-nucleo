@@ -1,6 +1,6 @@
 import { ComandoStatus } from '../enums';
 export interface IRespostaComando {
-    readonly id: number;
+    readonly _id: string;
     readonly pattern: string;
     readonly imei: string;
     readonly dataHora: string;

@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RespostaComandoEntity = void 0;
 class RespostaComandoEntity {
     constructor(objeto) {
-        this.id = objeto.id;
+        this._id = objeto._id;
         this.pattern = objeto.pattern;
         this.imei = objeto.imei,
             this.dataHora = objeto.dataHora;
@@ -12,7 +12,7 @@ class RespostaComandoEntity {
     }
     validar() {
         try {
-            this._checarInteiro(this.id);
+            this._checarString(this._id);
             this._checarString(this.pattern);
             this._checarString(this.dataHora);
             this._checarString(this.imei);
@@ -28,7 +28,7 @@ class RespostaComandoEntity {
         return JSON.stringify({
             pattern: this.pattern,
             data: {
-                id: this.id,
+                _id: this._id,
                 imei: this.imei,
                 dataHora: this.dataHora,
                 status: this.status,
