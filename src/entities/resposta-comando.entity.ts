@@ -5,7 +5,7 @@ import { IRespostaComando } from '../contracts';
  * Para todo comando enviado pelo usuário é necessario retornar uma resposta, essa resposta
  * represnta o status do comando, ela iforma se o comando foi enviado ou não ao rastreador.
  *
- * O atributo "id" representa o id do registro no banco de dados.
+ * O atributo "_id" representa o id do registro no banco de dados.
  *
  * O atributo "dataHora" corresponde ao momento em que o comando foi enviado ao rastreador ou em
  * que o comando foi removido da fila por atigir o limite de tentativas de envio.
@@ -14,7 +14,7 @@ import { IRespostaComando } from '../contracts';
  * ao rastreador ou um comando que não pode ser enviado ao rastreador.
  */
 export class RespostaComandoEntity {
-  public readonly id: number;
+  public readonly _id: string;
   public readonly pattern: string;
   public readonly dataHora: string;
   public readonly status: ComandoStatus;
@@ -22,7 +22,7 @@ export class RespostaComandoEntity {
   public readonly imei: string;
 
   constructor (objeto: IRespostaComando) {
-    this.id            = objeto.id;
+    this._id           = objeto._id;
     this.pattern       = objeto.pattern;
     this.imei          = objeto.imei,
     this.dataHora      = objeto.dataHora;
@@ -32,7 +32,7 @@ export class RespostaComandoEntity {
 
   public validar (): boolean {
     try {
-      this._checarInteiro(this.id);
+      this._checarString(this._id);
       this._checarString(this.pattern);
       this._checarString(this.dataHora);
       this._checarString(this.imei);
@@ -49,7 +49,7 @@ export class RespostaComandoEntity {
     return JSON.stringify({
       pattern: this.pattern,
       data   : {
-        id           : this.id,
+        _id          : this._id,
         imei         : this.imei,
         dataHora     : this.dataHora,
         status       : this.status,

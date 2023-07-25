@@ -181,7 +181,7 @@ export class EnviarComandoRastreadorService {
     const pattern  = 'comando';
 
     const resposta = new RespostaComandoEntity({
-      id           : comando.id,
+      _id          : comando._id,
       imei         : comando.imei,
       pattern      : pattern,
       dataHora     : dataHora,
@@ -210,7 +210,7 @@ export class EnviarComandoRastreadorService {
     try {
       const mensagem = JSON.parse(msg.content.toString('ascii'));
       const comandoEntity = new ComandoUsuarioEntity({
-        id            : mensagem.id,
+        _id           : mensagem._id,
         integracao    : mensagem.integracao,
         identificador : mensagem.identificador,
         comando       : mensagem.comando,
