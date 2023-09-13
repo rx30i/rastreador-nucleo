@@ -7,5 +7,5 @@ var ComandoStatus;
     ComandoStatus["Enviado"] = "enviado";
     ComandoStatus["Confirmado"] = "confirmado";
     ComandoStatus["Erro"] = "erro";
-})(ComandoStatus = exports.ComandoStatus || (exports.ComandoStatus = {}));
+})(ComandoStatus || (exports.ComandoStatus = ComandoStatus = {}));
 //# sourceMappingURL=comando-status.js.map

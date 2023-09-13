@@ -6,5 +6,5 @@ var Pattern;
     Pattern["DISPOSITIVOS_CONECTADOS"] = "dispositivosConectados";
     Pattern["COMANDO_USUARIO"] = "comando_usuario";
     Pattern["CONEXAO_FECHADA"] = "conexaoFechada";
-})(Pattern = exports.Pattern || (exports.Pattern = {}));
+})(Pattern || (exports.Pattern = Pattern = {}));
 //# sourceMappingURL=pattern.js.map

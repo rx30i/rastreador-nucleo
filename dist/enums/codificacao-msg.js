@@ -5,5 +5,5 @@ var CodificacaoMsg;
 (function (CodificacaoMsg) {
     CodificacaoMsg["ASCII"] = "ascii";
     CodificacaoMsg["HEX"] = "hex";
-})(CodificacaoMsg = exports.CodificacaoMsg || (exports.CodificacaoMsg = {}));
+})(CodificacaoMsg || (exports.CodificacaoMsg = CodificacaoMsg = {}));
 //# sourceMappingURL=codificacao-msg.js.map
