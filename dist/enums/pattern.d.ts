@@ -1,5 +1,4 @@
 export declare enum Pattern {
-    DISPOSITIVOS_CONECTADOS = "dispositivosConectados",
-    COMANDO_USUARIO = "comando_usuario",
-    CONEXAO_FECHADA = "conexaoFechada"
+    QTD_DISPOSITIVOS_CONECTADOS = "QTD_DISPOSITIVOS_CONECTADOS",
+    CONEXAO_FECHADA = "CONEXAO_FECHADA"
 }

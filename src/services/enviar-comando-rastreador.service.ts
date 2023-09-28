@@ -1,18 +1,16 @@
 import { ConsumeMessage, MessagePropertyHeaders, Channel } from 'amqplib';
 import { ComandoUsuarioEntity, RespostaComandoEntity } from '../entities';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { ClientProxy } from '@nestjs/microservices';
+import { CodificacaoMsg, ComandoStatus } from '../enums';
 import { setTimeout } from 'node:timers/promises';
-import { ComandoStatus, Pattern } from '../enums';
-import { Observable, lastValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
-import { timeout } from 'rxjs/operators';
+import { ServidorTcp } from '../transport';
 import { ILoger } from '../contracts';
 
 /**
  * Quando o usuário envia um comando ao rastreador, esse comando primeiro vai para uma fila do rabbitMq,
- * essa classe recebe as mensagens dessa fila, encaminha para o servidor TCP, esse encaminha para um
- * controller e esse controller envia esses comandos para os rastreadores correspondentes.
+ * essa classe recebe as mensagens dessa fila e as envia para os rastreadores correspondentes,
+ * desde que os mesmos estejam conectados.
  */
 export class EnviarComandoRastreadorService {
   private channel: Channel;
@@ -30,7 +28,6 @@ export class EnviarComandoRastreadorService {
   private tentativasEnvio = 720;
 
   constructor (
-    private readonly clientProxy: ClientProxy,
     private readonly amqpConnection: AmqpConnection,
     private readonly configService: ConfigService,
     private readonly logger: ILoger
@@ -46,7 +43,7 @@ export class EnviarComandoRastreadorService {
    *
    * @returns {Promise<void>}
    */
-  public async receberMsgRabbitMq (): Promise<void> {
+  public async receberMsgRabbitMqEnviarParaRastreador (codificacaoCmd: CodificacaoMsg): Promise<void> {
     const filaComandos = this.configService.get<string>('RABBITMQ_FILA_COMANDO');
     if (!filaComandos) {
       this.logger.error('Variável de ambiente "RABBITMQ_FILA_COMANDO" não foi declarada no .env ');
@@ -57,28 +54,24 @@ export class EnviarComandoRastreadorService {
     this.channel.prefetch(10);
     this.channel.on('close', async () => {
       await setTimeout(60000);
-      this.receberMsgRabbitMq();
+      this.receberMsgRabbitMqEnviarParaRastreador(codificacaoCmd);
     });
 
     this.channel.consume(filaComandos, async (mensagem: ConsumeMessage) => {
       this.logger.local('COMANDO CRIADO:', mensagem.content.toString('ascii'));
-      this.enviarComando(mensagem);
+      this.enviarComando(mensagem, codificacaoCmd);
     });
   }
 
   /**
-   * Envia cada comando recebido do rabbitMq para o servidor TCP mantido por
-   * essa aplicação, o servidor ao qual os rastreadores se conectam. O servidor
-   * TCP encaminha essas messagens para o controller responsavel e esse controlle
-   * faz envio do comando ao rastreador.
-   *
-   * Esse controller retorna uma resposta informando se o comando, a mensagem
-   * foi enviada ao rastreador.
+   * Envia cada comando recebido do rabbitMq para o rastreador, se o mesmo estiver conectado ao servidor TCP.
+   * Se o rastreador não estiver conectado, uma nova tentativa de envio será feita depois de alguns segundos,
+   * serão feitas 720 tentativas de envio do comando.
    *
    * @param {ConsumeMessage} mensagem
    * @return {undefined}
    */
-  private async enviarComando (mensagem: ConsumeMessage): Promise<undefined> {
+  private enviarComando (mensagem: ConsumeMessage, codificacaoCmd: CodificacaoMsg): undefined {
     const comandoEntity = this.decodificarMsg(mensagem);
     try {
       if (comandoEntity === undefined) {
@@ -87,12 +80,8 @@ export class EnviarComandoRastreadorService {
         return undefined;
       }
 
-      const observavel: Observable<boolean>
-      = this.clientProxy.send<boolean, ComandoUsuarioEntity>(
-        Pattern.COMANDO_USUARIO, comandoEntity
-      );
-
-      const resposta = await lastValueFrom<boolean>(observavel.pipe(timeout(5000)));
+      const socket   = ServidorTcp.obterConexao(comandoEntity.imei);
+      const resposta = socket?.write(Buffer.from(comandoEntity.comando, codificacaoCmd));
       if (resposta === true) {
         this.finalizarMsg(resposta, mensagem, comandoEntity);
         return undefined;

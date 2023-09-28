@@ -9,7 +9,7 @@ export declare class ServidorTcp extends Server implements CustomTransportStrate
     private servidor;
     constructor(configuracao: IServidorTCPConfig);
     listen(callback: () => void): void;
-    obterConexao(imei: string): ISocket | null;
+    static obterConexao(imei: string): ISocket | null;
     close(): void;
     private mensagem;
     private messagePattern;

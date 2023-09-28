@@ -37,10 +37,6 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
       this.qtdDispositivosConectados();
     });
 
-    /*this.servidor.on('error', (erro) => {
-      throw erro;
-    });*/
-
     const configuracao = this.configuracao.servidor;
     this.servidor.listen(configuracao, callback);
   }
@@ -51,7 +47,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * @param {imei} imei
    * @return {ISocket | null}
    */
-  public obterConexao (imei: string): ISocket | null {
+  public static obterConexao (imei: string): ISocket | null {
     const resposta = ServidorTcp.conexoesTcp.get(imei);
     if (resposta === undefined) {
       return null;
@@ -78,7 +74,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   private async mensagem (socket: ISocket): Promise<void> {
     socket.on('data', async (message: Buffer) => {
       for (const resposta of this.separarMensagens(message)) {
-        const tcpContexto  = new TcpContext([socket, resposta, this.obterConexao]);
+        const tcpContexto  = new TcpContext([socket, resposta, ServidorTcp.obterConexao]);
         const msgFormatada = await this.deserializer.deserialize(resposta);
         const consumidor   = this.getHandlerByPattern(msgFormatada.pattern);
 
@@ -158,7 +154,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
 
   /**
    * Remove o cliente que se desconectou da lista de conexões ativas. Também emite um evento
-   * cujo o patter é "conexaoFechada" caso ája um consumidor para esse evento.
+   * cujo o patter é "conexaoFechada" caso haja um consumidor para esse evento.
    *
    * Exemplo evento emitido:
    *  {pattern: 'conexaoFechada', data: {imei: '000000001', dataHora: '2021-02-12T19:18:15.000Z'}}
@@ -236,10 +232,10 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * Obtém de forma assíncrona o número de conexões simultâneas no servidor.
    *
    * Sempre que um novo dispositivo se conectar ao servidor esse método será executado e um evento será emitido
-   * caso tenha um consumidor registrado para o patter "dispositivosConectados".
+   * caso tenha um consumidor registrado para o patter "QTD_DISPOSITIVOS_CONECTADOS".
    *
    * Exemplo evento emitido:
-   *  {pattern: 'dispositivosConectados', data: {qtd: 3000, dataHora: '2021-02-12T19:18:15.000Z'}}
+   *  {pattern: 'QTD_DISPOSITIVOS_CONECTADOS', data: {qtd: 3000, dataHora: '2021-02-12T19:18:15.000Z'}}
    *
    * @returns {void}
    */
@@ -251,7 +247,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
       }
 
       const tempo  = (new Date()).toISOString();
-      const evento = {pattern: Pattern.DISPOSITIVOS_CONECTADOS, data: {qtd: quantidade, dataHora: tempo}};
+      const evento = {pattern: Pattern.QTD_DISPOSITIVOS_CONECTADOS, data: {qtd: quantidade, dataHora: tempo}};
       const consumidorEvento = this.getHandlerByPattern(evento.pattern);
       if (consumidorEvento?.isEventHandler) {
         this.handleEvent(evento.pattern, evento, undefined);

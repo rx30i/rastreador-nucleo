@@ -22,11 +22,6 @@ class ComandoUsuarioEntity {
             return false;
         }
     }
-    _checarInteiro(valor) {
-        if (Number.isInteger(valor) === false) {
-            throw 'Valor deve ser um numero interio.';
-        }
-    }
     _checarString(valor) {
         if (typeof valor !== 'string') {
             throw 'Valor deve ser uma string.';

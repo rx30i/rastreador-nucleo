@@ -51,12 +51,6 @@ export class ComandoUsuarioEntity {
     }
   }
 
-  private _checarInteiro (valor: number): void {
-    if (Number.isInteger(valor) === false) {
-      throw 'Valor deve ser um numero interio.';
-    }
-  }
-
   private _checarString (valor: string): void {
     if (typeof valor !== 'string') {
       throw 'Valor deve ser uma string.';

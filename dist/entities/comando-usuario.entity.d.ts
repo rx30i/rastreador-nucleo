@@ -13,7 +13,6 @@ export declare class ComandoUsuarioEntity {
     readonly imei: string;
     constructor(dados: IComandoUsuarioEntity);
     valido(): boolean;
-    private _checarInteiro;
     private _checarString;
 }
 export {};

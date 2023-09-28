@@ -26,7 +26,7 @@ class ServidorTcp extends microservices_1.Server {
         const configuracao = this.configuracao.servidor;
         this.servidor.listen(configuracao, callback);
     }
-    obterConexao(imei) {
+    static obterConexao(imei) {
         const resposta = ServidorTcp.conexoesTcp.get(imei);
         if (resposta === undefined) {
             return null;
@@ -41,7 +41,7 @@ class ServidorTcp extends microservices_1.Server {
     async mensagem(socket) {
         socket.on('data', async (message) => {
             for (const resposta of this.separarMensagens(message)) {
-                const tcpContexto = new ctx_host_1.TcpContext([socket, resposta, this.obterConexao]);
+                const tcpContexto = new ctx_host_1.TcpContext([socket, resposta, ServidorTcp.obterConexao]);
                 const msgFormatada = await this.deserializer.deserialize(resposta);
                 const consumidor = this.getHandlerByPattern(msgFormatada.pattern);
                 if (consumidor === null) {
@@ -125,7 +125,7 @@ class ServidorTcp extends microservices_1.Server {
                 return;
             }
             const tempo = (new Date()).toISOString();
-            const evento = { pattern: enums_1.Pattern.DISPOSITIVOS_CONECTADOS, data: { qtd: quantidade, dataHora: tempo } };
+            const evento = { pattern: enums_1.Pattern.QTD_DISPOSITIVOS_CONECTADOS, data: { qtd: quantidade, dataHora: tempo } };
             const consumidorEvento = this.getHandlerByPattern(evento.pattern);
             if (consumidorEvento?.isEventHandler) {
                 this.handleEvent(evento.pattern, evento, undefined);

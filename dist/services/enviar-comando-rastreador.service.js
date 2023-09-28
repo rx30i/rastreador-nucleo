@@ -2,19 +2,17 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EnviarComandoRastreadorService = void 0;
 const entities_1 = require("../entities");
-const promises_1 = require("node:timers/promises");
 const enums_1 = require("../enums");
-const rxjs_1 = require("rxjs");
-const operators_1 = require("rxjs/operators");
+const promises_1 = require("node:timers/promises");
+const transport_1 = require("../transport");
 class EnviarComandoRastreadorService {
-    constructor(clientProxy, amqpConnection, configService, logger) {
-        this.clientProxy = clientProxy;
+    constructor(amqpConnection, configService, logger) {
         this.amqpConnection = amqpConnection;
         this.configService = configService;
         this.logger = logger;
         this.tentativasEnvio = 720;
     }
-    async receberMsgRabbitMq() {
+    async receberMsgRabbitMqEnviarParaRastreador(codificacaoCmd) {
         const filaComandos = this.configService.get('RABBITMQ_FILA_COMANDO');
         if (!filaComandos) {
             this.logger.error('Variável de ambiente "RABBITMQ_FILA_COMANDO" não foi declarada no .env ');
@@ -24,14 +22,14 @@ class EnviarComandoRastreadorService {
         this.channel.prefetch(10);
         this.channel.on('close', async () => {
             await (0, promises_1.setTimeout)(60000);
-            this.receberMsgRabbitMq();
+            this.receberMsgRabbitMqEnviarParaRastreador(codificacaoCmd);
         });
         this.channel.consume(filaComandos, async (mensagem) => {
             this.logger.local('COMANDO CRIADO:', mensagem.content.toString('ascii'));
-            this.enviarComando(mensagem);
+            this.enviarComando(mensagem, codificacaoCmd);
         });
     }
-    async enviarComando(mensagem) {
+    enviarComando(mensagem, codificacaoCmd) {
         const comandoEntity = this.decodificarMsg(mensagem);
         try {
             if (comandoEntity === undefined) {
@@ -39,8 +37,8 @@ class EnviarComandoRastreadorService {
                 this.channel.publish('amq.direct', 'rastreador.erro', mensagem.content);
                 return undefined;
             }
-            const observavel = this.clientProxy.send(enums_1.Pattern.COMANDO_USUARIO, comandoEntity);
-            const resposta = await (0, rxjs_1.lastValueFrom)(observavel.pipe((0, operators_1.timeout)(5000)));
+            const socket = transport_1.ServidorTcp.obterConexao(comandoEntity.imei);
+            const resposta = socket?.write(Buffer.from(comandoEntity.comando, codificacaoCmd));
             if (resposta === true) {
                 this.finalizarMsg(resposta, mensagem, comandoEntity);
                 return undefined;

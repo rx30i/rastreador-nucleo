@@ -1,16 +1,15 @@
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { ClientProxy } from '@nestjs/microservices';
+import { CodificacaoMsg } from '../enums';
 import { ConfigService } from '@nestjs/config';
 import { ILoger } from '../contracts';
 export declare class EnviarComandoRastreadorService {
-    private readonly clientProxy;
     private readonly amqpConnection;
     private readonly configService;
     private readonly logger;
     private channel;
     private tentativasEnvio;
-    constructor(clientProxy: ClientProxy, amqpConnection: AmqpConnection, configService: ConfigService, logger: ILoger);
-    receberMsgRabbitMq(): Promise<void>;
+    constructor(amqpConnection: AmqpConnection, configService: ConfigService, logger: ILoger);
+    receberMsgRabbitMqEnviarParaRastreador(codificacaoCmd: CodificacaoMsg): Promise<void>;
     private enviarComando;
     private finalizarMsg;
     private rejeitarMsg;
