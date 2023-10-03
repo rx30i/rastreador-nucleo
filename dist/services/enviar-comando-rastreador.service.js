@@ -12,6 +12,46 @@ class EnviarComandoRastreadorService {
         this.logger = logger;
         this.tentativasEnvio = 720;
     }
+    async receberMsgRabbitMq(callback) {
+        const filaComandos = this.configService.get('RABBITMQ_FILA_COMANDO');
+        if (!filaComandos) {
+            this.logger.error('Variável de ambiente "RABBITMQ_FILA_COMANDO" não foi declarada no .env ');
+            return;
+        }
+        this.channel = this.amqpConnection.channel;
+        this.channel.prefetch(10);
+        this.channel.on('close', async () => {
+            await (0, promises_1.setTimeout)(60000);
+            this.receberMsgRabbitMq(callback);
+        });
+        this.channel.consume(filaComandos, async (mensagem) => {
+            this.logger.local('COMANDO CRIADO:', mensagem.content.toString('ascii'));
+            callback(mensagem);
+        });
+    }
+    enviarComando1(mensagem, comando) {
+        const comandoEntity = this.decodificarMsg(mensagem);
+        try {
+            if (comandoEntity === undefined) {
+                this.channel.ack(mensagem, false);
+                this.channel.publish('amq.direct', 'rastreador.erro', mensagem.content);
+                return undefined;
+            }
+            const socket = transport_1.ServidorTcp.obterConexao(comandoEntity.imei);
+            const resposta = socket?.write(comando);
+            if (resposta === true) {
+                this.finalizarMsg(resposta, mensagem, comandoEntity);
+                return undefined;
+            }
+            this.rejeitarMsg(false, mensagem);
+            this.naoPodeSerEnviada(false, mensagem, comandoEntity);
+        }
+        catch (erro) {
+            this.rejeitarMsg(false, mensagem);
+            this.naoPodeSerEnviada(false, mensagem, comandoEntity);
+            this.logger.capiturarException(erro);
+        }
+    }
     async receberMsgRabbitMqEnviarParaRastreador(codificacaoCmd) {
         const filaComandos = this.configService.get('RABBITMQ_FILA_COMANDO');
         if (!filaComandos) {
