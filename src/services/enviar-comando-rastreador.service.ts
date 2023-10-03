@@ -1,10 +1,10 @@
 import { ConsumeMessage, MessagePropertyHeaders, Channel } from 'amqplib';
 import { ComandoUsuarioEntity, RespostaComandoEntity } from '../entities';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { CodificacaoMsg, ComandoStatus } from '../enums';
 import { setTimeout } from 'node:timers/promises';
 import { ConfigService } from '@nestjs/config';
 import { ServidorTcp } from '../transport';
+import { ComandoStatus } from '../enums';
 import { ILoger } from '../contracts';
 
 /**
@@ -69,10 +69,10 @@ export class EnviarComandoRastreadorService {
    * serão feitas 720 tentativas de envio do comando.
    *
    * @param {ConsumeMessage} mensagem
-   * @param {ComandoUsuarioEntity} comandoEntity
+   * @param {Buffer} comando
    * @return {undefined}
    */
-  public enviarComando1 (mensagem: ConsumeMessage, comando: Buffer): undefined {
+  public enviarComando (mensagem: ConsumeMessage, comando: Buffer): undefined {
     const comandoEntity = this.decodificarMsg(mensagem);
     try {
       if (comandoEntity === undefined) {
@@ -83,69 +83,6 @@ export class EnviarComandoRastreadorService {
 
       const socket   = ServidorTcp.obterConexao(comandoEntity.imei);
       const resposta = socket?.write(comando);
-      if (resposta === true) {
-        this.finalizarMsg(resposta, mensagem, comandoEntity);
-        return undefined;
-      }
-
-      this.rejeitarMsg(false, mensagem);
-      this.naoPodeSerEnviada(false, mensagem, comandoEntity);
-    } catch (erro) {
-      this.rejeitarMsg(false, mensagem);
-      this.naoPodeSerEnviada(false, mensagem, comandoEntity);
-      this.logger.capiturarException(erro);
-    }
-  }
-
-  /**
-   * Se o atributo amqpConnection não for uma instância válida, esse método vai gerar uma exception
-   * que não é tratada o que vai fazer com o que a aplicação seja encerrada.
-   *
-   * Se a conexão com o RabbitMQ for fechada, isso vai ser identificado e depois de 1 minuto o método
-   * tenta se inscrever novamente na fila para ouvir as mensagens recebidas, se uma nova conexão não
-   * foi realizada vai ser gerada uma exceção que não é tratada e isso finaliza a aplicação.
-   *
-   * @returns {Promise<void>}
-   */
-  public async receberMsgRabbitMqEnviarParaRastreador (codificacaoCmd: CodificacaoMsg): Promise<void> {
-    const filaComandos = this.configService.get<string>('RABBITMQ_FILA_COMANDO');
-    if (!filaComandos) {
-      this.logger.error('Variável de ambiente "RABBITMQ_FILA_COMANDO" não foi declarada no .env ');
-      return;
-    }
-
-    this.channel = this.amqpConnection.channel;
-    this.channel.prefetch(10);
-    this.channel.on('close', async () => {
-      await setTimeout(60000);
-      this.receberMsgRabbitMqEnviarParaRastreador(codificacaoCmd);
-    });
-
-    this.channel.consume(filaComandos, async (mensagem: ConsumeMessage) => {
-      this.logger.local('COMANDO CRIADO:', mensagem.content.toString('ascii'));
-      this.enviarComando(mensagem, codificacaoCmd);
-    });
-  }
-
-  /**
-   * Envia cada comando recebido do rabbitMq para o rastreador, se o mesmo estiver conectado ao servidor TCP.
-   * Se o rastreador não estiver conectado, uma nova tentativa de envio será feita depois de alguns segundos,
-   * serão feitas 720 tentativas de envio do comando.
-   *
-   * @param {ConsumeMessage} mensagem
-   * @return {undefined}
-   */
-  private enviarComando (mensagem: ConsumeMessage, codificacaoCmd: CodificacaoMsg): undefined {
-    const comandoEntity = this.decodificarMsg(mensagem);
-    try {
-      if (comandoEntity === undefined) {
-        this.channel.ack(mensagem, false);
-        this.channel.publish('amq.direct', 'rastreador.erro', mensagem.content);
-        return undefined;
-      }
-
-      const socket   = ServidorTcp.obterConexao(comandoEntity.imei);
-      const resposta = socket?.write(Buffer.from(comandoEntity.comando, codificacaoCmd));
       if (resposta === true) {
         this.finalizarMsg(resposta, mensagem, comandoEntity);
         return undefined;

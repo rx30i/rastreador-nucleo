@@ -2,9 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EnviarComandoRastreadorService = void 0;
 const entities_1 = require("../entities");
-const enums_1 = require("../enums");
 const promises_1 = require("node:timers/promises");
 const transport_1 = require("../transport");
+const enums_1 = require("../enums");
 class EnviarComandoRastreadorService {
     constructor(amqpConnection, configService, logger) {
         this.amqpConnection = amqpConnection;
@@ -29,7 +29,7 @@ class EnviarComandoRastreadorService {
             callback(mensagem);
         });
     }
-    enviarComando1(mensagem, comando) {
+    enviarComando(mensagem, comando) {
         const comandoEntity = this.decodificarMsg(mensagem);
         try {
             if (comandoEntity === undefined) {
@@ -39,46 +39,6 @@ class EnviarComandoRastreadorService {
             }
             const socket = transport_1.ServidorTcp.obterConexao(comandoEntity.imei);
             const resposta = socket?.write(comando);
-            if (resposta === true) {
-                this.finalizarMsg(resposta, mensagem, comandoEntity);
-                return undefined;
-            }
-            this.rejeitarMsg(false, mensagem);
-            this.naoPodeSerEnviada(false, mensagem, comandoEntity);
-        }
-        catch (erro) {
-            this.rejeitarMsg(false, mensagem);
-            this.naoPodeSerEnviada(false, mensagem, comandoEntity);
-            this.logger.capiturarException(erro);
-        }
-    }
-    async receberMsgRabbitMqEnviarParaRastreador(codificacaoCmd) {
-        const filaComandos = this.configService.get('RABBITMQ_FILA_COMANDO');
-        if (!filaComandos) {
-            this.logger.error('Variável de ambiente "RABBITMQ_FILA_COMANDO" não foi declarada no .env ');
-            return;
-        }
-        this.channel = this.amqpConnection.channel;
-        this.channel.prefetch(10);
-        this.channel.on('close', async () => {
-            await (0, promises_1.setTimeout)(60000);
-            this.receberMsgRabbitMqEnviarParaRastreador(codificacaoCmd);
-        });
-        this.channel.consume(filaComandos, async (mensagem) => {
-            this.logger.local('COMANDO CRIADO:', mensagem.content.toString('ascii'));
-            this.enviarComando(mensagem, codificacaoCmd);
-        });
-    }
-    enviarComando(mensagem, codificacaoCmd) {
-        const comandoEntity = this.decodificarMsg(mensagem);
-        try {
-            if (comandoEntity === undefined) {
-                this.channel.ack(mensagem, false);
-                this.channel.publish('amq.direct', 'rastreador.erro', mensagem.content);
-                return undefined;
-            }
-            const socket = transport_1.ServidorTcp.obterConexao(comandoEntity.imei);
-            const resposta = socket?.write(Buffer.from(comandoEntity.comando, codificacaoCmd));
             if (resposta === true) {
                 this.finalizarMsg(resposta, mensagem, comandoEntity);
                 return undefined;

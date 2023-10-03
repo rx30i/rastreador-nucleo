@@ -2,7 +2,6 @@
 import { ConsumeMessage } from 'amqplib';
 import { ComandoUsuarioEntity } from '../entities';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { CodificacaoMsg } from '../enums';
 import { ConfigService } from '@nestjs/config';
 import { ILoger } from '../contracts';
 export declare class EnviarComandoRastreadorService {
@@ -13,9 +12,7 @@ export declare class EnviarComandoRastreadorService {
     private tentativasEnvio;
     constructor(amqpConnection: AmqpConnection, configService: ConfigService, logger: ILoger);
     receberMsgRabbitMq(callback: (mensagem: ConsumeMessage) => void): Promise<void>;
-    enviarComando1(mensagem: ConsumeMessage, comando: Buffer): undefined;
-    receberMsgRabbitMqEnviarParaRastreador(codificacaoCmd: CodificacaoMsg): Promise<void>;
-    private enviarComando;
+    enviarComando(mensagem: ConsumeMessage, comando: Buffer): undefined;
     private finalizarMsg;
     private rejeitarMsg;
     private naoPodeSerEnviada;
