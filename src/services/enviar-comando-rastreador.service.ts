@@ -168,7 +168,7 @@ export class EnviarComandoRastreadorService {
    */
   private publicarResposta (statusResposta: ComandoStatus, comando: ComandoUsuarioEntity): void {
     const dataHora = new Date().toISOString();
-    const pattern  = 'comando';
+    const pattern  = 'COMANDO';
 
     const resposta = new RespostaComandoEntity({
       _id          : comando._id,

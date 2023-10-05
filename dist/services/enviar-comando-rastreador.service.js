@@ -77,7 +77,7 @@ class EnviarComandoRastreadorService {
     }
     publicarResposta(statusResposta, comando) {
         const dataHora = new Date().toISOString();
-        const pattern = 'comando';
+        const pattern = 'COMANDO';
         const resposta = new entities_1.RespostaComandoEntity({
             _id: comando._id,
             imei: comando.imei,
