@@ -200,11 +200,12 @@ export class EnviarComandoRastreadorService {
     try {
       const mensagem = JSON.parse(msg.content.toString('ascii'));
       const comandoEntity = new ComandoUsuarioEntity({
-        _id           : mensagem._id,
-        integracao    : mensagem.integracao,
-        identificador : mensagem.identificador,
-        comando       : mensagem.comando,
-        imei          : mensagem.imei,
+        _id             : mensagem._id,
+        modeloRastreador: mensagem.modeloRastreador,
+        integracao      : mensagem.integracao,
+        identificador   : mensagem.identificador,
+        comando         : mensagem.comando,
+        imei            : mensagem.imei,
       });
 
       return comandoEntity.valido()

@@ -1,5 +1,6 @@
 interface IComandoUsuarioEntity {
     readonly _id: string;
+    readonly modeloRastreador: string;
     readonly integracao: string;
     readonly identificador: string;
     readonly comando: string;
@@ -7,6 +8,7 @@ interface IComandoUsuarioEntity {
 }
 export declare class ComandoUsuarioEntity {
     readonly _id: string;
+    readonly modeloRastreador: string;
     readonly integracao: string;
     readonly identificador: string;
     readonly comando: string;
