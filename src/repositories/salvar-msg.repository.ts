@@ -12,8 +12,8 @@ export class SalvarMsgRepository {
    * @param   {IPadraoMsgNestjs} mensagem
    * @returns {Promise<void>}
    */
-  public async salvar (mensagem: IPadraoMsgNestjs): Promise<void> {
-    await this.amqpConnection.publish(
+  public async salvar (mensagem: IPadraoMsgNestjs): Promise<boolean> {
+    return await this.amqpConnection.publish(
       'amq.direct',
       'rastreador.mensagem',
       Buffer.from(JSON.stringify(mensagem))
@@ -28,8 +28,8 @@ export class SalvarMsgRepository {
    * @param {string} mensagem
    * @returns {Promise<boolean>}
    */
-  public async salvarDesconhecida (mensagem: string): Promise<void> {
-    await this.amqpConnection.publish(
+  public async salvarDesconhecida (mensagem: string): Promise<boolean> {
+    return await this.amqpConnection.publish(
       'amq.direct',
       'rastreador.erro',
       Buffer.from(mensagem)

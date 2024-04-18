@@ -17,10 +17,10 @@ let SalvarMsgRepository = class SalvarMsgRepository {
         this.amqpConnection = amqpConnection;
     }
     async salvar(mensagem) {
-        await this.amqpConnection.publish('amq.direct', 'rastreador.mensagem', Buffer.from(JSON.stringify(mensagem)));
+        return await this.amqpConnection.publish('amq.direct', 'rastreador.mensagem', Buffer.from(JSON.stringify(mensagem)));
     }
     async salvarDesconhecida(mensagem) {
-        await this.amqpConnection.publish('amq.direct', 'rastreador.erro', Buffer.from(mensagem));
+        return await this.amqpConnection.publish('amq.direct', 'rastreador.erro', Buffer.from(mensagem));
     }
 };
 exports.SalvarMsgRepository = SalvarMsgRepository;
