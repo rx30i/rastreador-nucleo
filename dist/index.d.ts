@@ -1,3 +1,4 @@
+export * from './repositories';
 export * from './contracts';
 export * from './transport';
 export * from './services';

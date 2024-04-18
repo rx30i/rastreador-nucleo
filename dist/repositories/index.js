@@ -14,11 +14,5 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-__exportStar(require("./repositories"), exports);
-__exportStar(require("./contracts"), exports);
-__exportStar(require("./transport"), exports);
-__exportStar(require("./services"), exports);
-__exportStar(require("./entities"), exports);
-__exportStar(require("./helpers"), exports);
-__exportStar(require("./enums"), exports);
+__exportStar(require("./salvar-msg.repository"), exports);
 //# sourceMappingURL=index.js.map
