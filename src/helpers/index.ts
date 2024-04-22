@@ -1,3 +1,3 @@
-export { geoJsonPoint } from './geo-json-point';
-export { encerrarApp } from './encerrar-app';
-export { isJson } from './is-json';
+export * from './geo-json-point';
+export * from './encerrar-app';
+export * from './is-json';
