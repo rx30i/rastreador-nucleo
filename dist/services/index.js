@@ -16,4 +16,5 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./enviar-comando-rastreador.service"), exports);
 __exportStar(require("./declarar-filas-rabbitmq.service"), exports);
+__exportStar(require("./logger.service"), exports);
 //# sourceMappingURL=index.js.map
