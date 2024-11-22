@@ -60,7 +60,7 @@ class ServidorTcp extends microservices_1.Server {
         const mensagem = msgFormatada;
         const consumidor = this.getHandlerByPattern(mensagem.pattern);
         const response$ = this.transformToObservable(await consumidor(mensagem.data, tcpContexto));
-        response$ && this.send(response$, data => {
+        response$ && this.send(response$, (data) => {
             Object.assign(data, { id: mensagem.id });
             const outgoingResponse = this.serializer.serialize(data);
             tcpContexto.getSocketRef().write(Buffer.from(this.formatarResposta(outgoingResponse)));
@@ -151,8 +151,8 @@ class ServidorTcp extends microservices_1.Server {
         const codificacao = this.configuracao.codificacaoMsg;
         const delimitador = this.configuracao.delimitadorMsg;
         const demaisMsg = mensagem.toString(codificacao);
-        if (demaisMsg.slice(0, delimitador.length) === delimitador
-            && (demaisMsg.match(new RegExp(delimitador, 'g')) || []).length > 0) {
+        if (demaisMsg.slice(0, delimitador.length) === delimitador &&
+            (demaisMsg.match(new RegExp(delimitador, 'g')) || []).length > 0) {
             const msgAtualizada = demaisMsg.replace(new RegExp(delimitador, 'g'), `@@@${delimitador}`);
             const conjutoMsg = msgAtualizada.split('@@@');
             const novaResposta = [];

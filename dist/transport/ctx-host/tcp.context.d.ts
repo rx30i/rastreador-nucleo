@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { BaseRpcContext } from '@nestjs/microservices/ctx-host/base-rpc.context';
 import { ISocket } from '../../contracts';
 import { Socket } from 'net';

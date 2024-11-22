@@ -1,6 +1,6 @@
-import { IMensagemConexaoFechada } from '../contracts/i-mensagem-conexao-fechada';
-import { HttpException, HttpStatus } from '@nestjs/common';
-import { Pattern } from '../enums/pattern';
+import {IMensagemConexaoFechada} from '../contracts/i-mensagem-conexao-fechada';
+import {HttpException, HttpStatus} from '@nestjs/common';
+import {Pattern} from '../enums/pattern';
 
 export class MensagemConexaoFechadaEntity {
   public readonly dataHora: string;
@@ -9,7 +9,7 @@ export class MensagemConexaoFechadaEntity {
   public readonly pattern: string;
   public readonly online: boolean;
 
-  constructor (dataHora: string, imei: string, integracao: string) {
+  constructor(dataHora: string, imei: string, integracao: string) {
     this.dataHora   = this.obterDataHora(dataHora);
     this.imei       = this.obterString(imei);
     this.pattern    = Pattern.CONEXAO_FECHADA;
@@ -17,16 +17,16 @@ export class MensagemConexaoFechadaEntity {
     this.online     = false;
   }
 
-  public obterObjeto (): IMensagemConexaoFechada {
+  public obterObjeto(): IMensagemConexaoFechada {
     return {...this};
   }
 
   /**
-   * @returns {void}
+   * @return {void}
    * @throws { HttpException }
    */
-  public validar (): void {
-    if(!this.dataHora) {
+  public validar(): void {
+    if (!this.dataHora) {
       throw new HttpException(
         `O atributo dataHora não é valido. Valor atual é: '${this.dataHora}'`,
         HttpStatus.UNPROCESSABLE_ENTITY
@@ -41,16 +41,16 @@ export class MensagemConexaoFechadaEntity {
     }
   }
 
-  private obterDataHora (dataHora: string): string {
-    if (typeof dataHora === 'string'
-    && /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3})Z$/g.test(dataHora) === true) {
+  private obterDataHora(dataHora: string): string {
+    if (typeof dataHora === 'string' &&
+    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3})Z$/g.test(dataHora) === true) {
       return dataHora;
     }
 
     return '';
   }
 
-  private obterString (valor: string): string {
+  private obterString(valor: string): string {
     if (typeof valor === 'string') {
       return valor;
     }

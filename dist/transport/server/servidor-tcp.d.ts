@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { Server } from '@nestjs/microservices';
 import { CustomTransportStrategy } from '@nestjs/microservices';
 import { IServidorTCPConfig, ISocket } from '../../contracts';

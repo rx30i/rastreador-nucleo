@@ -23,8 +23,8 @@ class MensagemConexaoFechadaEntity {
         }
     }
     obterDataHora(dataHora) {
-        if (typeof dataHora === 'string'
-            && /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3})Z$/g.test(dataHora) === true) {
+        if (typeof dataHora === 'string' &&
+            /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3})Z$/g.test(dataHora) === true) {
             return dataHora;
         }
         return '';

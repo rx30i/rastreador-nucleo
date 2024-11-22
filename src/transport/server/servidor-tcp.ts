@@ -1,10 +1,10 @@
-import { WritePacket, PacketId, IncomingEvent, Server } from '@nestjs/microservices';
-import { CustomTransportStrategy, IncomingRequest} from '@nestjs/microservices';
-import { IServidorTCPConfig, ISocket } from '../../contracts';
-import { StringDecoder } from 'node:string_decoder';
-import { TcpContext } from '../ctx-host';
-import { Pattern } from '../../enums';
-import { Observable } from 'rxjs';
+import {WritePacket, PacketId, IncomingEvent, Server} from '@nestjs/microservices';
+import {CustomTransportStrategy, IncomingRequest} from '@nestjs/microservices';
+import {IServidorTCPConfig, ISocket} from '../../contracts';
+import {StringDecoder} from 'node:string_decoder';
+import {TcpContext} from '../ctx-host';
+import {Pattern} from '../../enums';
+import {Observable} from 'rxjs';
 import * as Net from 'node:net';
 
 declare type MsgRecebida = IncomingRequest | IncomingEvent | Promise<IncomingRequest | IncomingEvent>;
@@ -15,7 +15,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   private static conexoesTcp: Map<string, ISocket>;
   private servidor: Net.Server;
 
-  constructor (configuracao: IServidorTCPConfig) {
+  constructor(configuracao: IServidorTCPConfig) {
     super();
 
     ServidorTcp.conexoesTcp = new Map();
@@ -28,7 +28,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   /**
    * @override
    * */
-  public listen (callback: () => void) {
+  public listen(callback: () => void) {
     this.servidor = Net.createServer((socket: ISocket) => {
       this.mensagem(socket);
       this.conexaoErro(socket);
@@ -47,7 +47,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * @param {imei} imei
    * @return {ISocket | null}
    */
-  public static obterConexao (imei: string): ISocket | null {
+  public static obterConexao(imei: string): ISocket | null {
     const resposta = ServidorTcp.conexoesTcp.get(imei);
     if (resposta === undefined) {
       return null;
@@ -59,7 +59,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   /**
    * @override
    * */
-  public close (): void {
+  public close(): void {
     if (this.servidor !== undefined) {
       this.servidor.close();
     }
@@ -69,9 +69,9 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * Recebe a mensagem enviada pelo cliente.
    *
    * @param {ISocket} socket
-   * @returns {void}
+   * @return {void}
    */
-  private async mensagem (socket: ISocket): Promise<void> {
+  private async mensagem(socket: ISocket): Promise<void> {
     socket.on('data', async (message: Buffer) => {
       for (const resposta of this.separarMensagens(message)) {
         const tcpContexto  = new TcpContext([socket, resposta, ServidorTcp.obterConexao]);
@@ -88,8 +88,11 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
           continue;
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
         consumidor?.isEventHandler
+          // eslint-disable-next-line operator-linebreak
           ? this.eventPattern(tcpContexto, msgFormatada)
+          // eslint-disable-next-line operator-linebreak
           : this.messagePattern(tcpContexto, msgFormatada);
 
         this.salvarConexao(socket, resposta);
@@ -97,15 +100,16 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
     });
   }
 
-  private async messagePattern (tcpContexto: TcpContext, msgFormatada: MsgRecebida): Promise<void> {
+  private async messagePattern(tcpContexto: TcpContext, msgFormatada: MsgRecebida): Promise<void> {
     const mensagem   = msgFormatada as IncomingRequest;
     const consumidor = this.getHandlerByPattern(mensagem.pattern);
     const response$  = this.transformToObservable(
       await consumidor(mensagem.data, tcpContexto),
     ) as Observable<any>;
 
-    response$ && this.send(response$, data => {
-      Object.assign(data, {id: mensagem.id });
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    response$ && this.send(response$, (data) => {
+      Object.assign(data, {id: mensagem.id});
       const outgoingResponse = this.serializer.serialize(
         data as WritePacket & PacketId,
       );
@@ -121,7 +125,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * @param {IncomingEvent} evento
    * @return {Promise<void>}
    */
-  private async eventPattern (tcpContexto: TcpContext, evento: IncomingEvent): Promise<void> {
+  private async eventPattern(tcpContexto: TcpContext, evento: IncomingEvent): Promise<void> {
     this.handleEvent(evento.pattern, evento, tcpContexto);
   }
 
@@ -131,9 +135,9 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * nesse momento o socket é encerrado.
    *
    * @param {ISocket} socket
-   * @returns {void}
+   * @return {void}
    */
-  private timeOut (socket: ISocket): void {
+  private timeOut(socket: ISocket): void {
     socket.setTimeout(600000);
     socket.on('timeout', () => {
       this.clienteDesconectou(socket);
@@ -144,9 +148,9 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * Evento emitido quando o cliente encerra a conexão com o servidor TCP.
    *
    * @param {ISocket} socket
-   * @returns {void}
+   * @return {void}
    */
-  private clienteEncerrouConexao (socket: ISocket): void {
+  private clienteEncerrouConexao(socket: ISocket): void {
     socket.on('end', () => {
       this.clienteDesconectou(socket);
     });
@@ -160,9 +164,9 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    *  {pattern: 'conexaoFechada', data: {imei: '000000001', dataHora: '2021-02-12T19:18:15.000Z'}}
    *
    * @param {ISocket} socket
-   * @returns {void}
+   * @return {void}
    */
-  private clienteDesconectou (socket: ISocket): void {
+  private clienteDesconectou(socket: ISocket): void {
     const imei: string = socket?.imei || '';
     const socketSalvo  = ServidorTcp.conexoesTcp.get(imei);
     if ((socketSalvo?.id || null) === socket?.id) {
@@ -184,9 +188,9 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * "read ECONNRESET" significa que o cliente encerrou abruptamente sua conexão.
    *
    * @param {ISocket} socket
-   * @returns {void}
+   * @return {void}
    */
-  private conexaoErro (socket: ISocket): void {
+  private conexaoErro(socket: ISocket): void {
     socket.on('error', (error) => {
       if (error.message === 'read ECONNRESET') {
         this.clienteDesconectou(socket);
@@ -203,9 +207,9 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   /**
    * @param {ISocket} conexao
    * @param {string} mensagem
-   * @returns {void}
+   * @return {void}
    */
-  private salvarConexao (conexao: ISocket, mensagem: string): void {
+  private salvarConexao(conexao: ISocket, mensagem: string): void {
     const rastreadorImei = this.configuracao.deserializer.obterImei(mensagem);
     if (!conexao.imei && rastreadorImei) {
       ServidorTcp.conexoesTcp.set(rastreadorImei, conexao);
@@ -221,8 +225,9 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * caracter #.
    *
    * @param {any} mensagem
+   * @return {string}
    */
-  private formatarResposta (mensagem: any): string {
+  private formatarResposta(mensagem: any): string {
     const messageString  = JSON.stringify(mensagem);
     const tamanhoMensagm = messageString.length;
     return `${tamanhoMensagm}#${messageString}`;
@@ -237,9 +242,9 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * Exemplo evento emitido:
    *  {pattern: 'QTD_DISPOSITIVOS_CONECTADOS', data: {qtd: 3000, dataHora: '2021-02-12T19:18:15.000Z'}}
    *
-   * @returns {void}
+   * @return {void}
    */
-  private qtdDispositivosConectados (): void {
+  private qtdDispositivosConectados(): void {
     this.servidor.getConnections((error, quantidade) => {
       if (error) {
         this.configuracao.tratarErro.error(error);
@@ -271,15 +276,16 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * concatenadas, nos demais casos esse verificação não é necessaria.
    *
    * @param {Buffer} mensagem
+   * @return {string[]}
    */
-  public separarMensagens (mensagem: Buffer): string[] {
-    //Mensagens enviadas por uma aplicação Nest
+  public separarMensagens(mensagem: Buffer): string[] {
+    // Mensagens enviadas por uma aplicação Nest
     let mensagemString = this.stringDecoder.write(mensagem);
     const quantidadeMenagem = (mensagemString.match(/\d+#{/g) || []).length;
     if (quantidadeMenagem > 0) {
       const arrayMensagens: string[] = [];
 
-      for(let _i = 0; _i < quantidadeMenagem; _i++) {
+      for (let _i = 0; _i < quantidadeMenagem; _i++) {
         const posicaoDelimitador = mensagemString.indexOf('#');
         const msgSemDelimidador  = mensagemString.substring(posicaoDelimitador + 1);
         const tamanhoMensagem    = parseInt(mensagemString.substring(0, posicaoDelimitador), 10);
@@ -293,18 +299,18 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
       return arrayMensagens;
     }
 
-    //Mensagens enviadas pelos rastreadores
+    // Mensagens enviadas pelos rastreadores
     const codificacao = this.configuracao.codificacaoMsg;
     const delimitador = this.configuracao.delimitadorMsg;
     const demaisMsg   = mensagem.toString(codificacao);
 
-    if (demaisMsg.slice(0, delimitador.length) === delimitador
-    && (demaisMsg.match(new RegExp(delimitador, 'g')) || []).length > 0) {
+    if (demaisMsg.slice(0, delimitador.length) === delimitador &&
+    (demaisMsg.match(new RegExp(delimitador, 'g')) || []).length > 0) {
       const msgAtualizada = demaisMsg.replace(new RegExp(delimitador, 'g'), `@@@${delimitador}`);
       const conjutoMsg    = msgAtualizada.split('@@@');
       const novaResposta  = [];
 
-      for(const resposta of conjutoMsg) {
+      for (const resposta of conjutoMsg) {
         if (resposta !== '') {
           novaResposta.push(resposta.replace(/(\r\n|\n|\r)/gm, ''));
         }

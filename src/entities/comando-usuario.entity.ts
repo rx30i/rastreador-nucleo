@@ -34,7 +34,7 @@ export class ComandoUsuarioEntity {
   public readonly comando: string;
   public readonly imei: string;
 
-  constructor (dados: IComandoUsuarioEntity) {
+  constructor(dados: IComandoUsuarioEntity) {
     this._id              = dados._id;
     this.modeloRastreador = dados.modeloRastreador;
     this.integracao       = dados.integracao;
@@ -43,7 +43,7 @@ export class ComandoUsuarioEntity {
     this.imei             = dados.imei;
   }
 
-  public valido (): boolean {
+  public valido(): boolean {
     try {
       this._checarString(this._id);
       this._checarString(this.modeloRastreador);
@@ -53,14 +53,14 @@ export class ComandoUsuarioEntity {
       this._checarString(this.imei);
 
       return true;
-    } catch (erro) {
+    } catch (_erro) {
       return false;
     }
   }
 
-  private _checarString (valor: string): void {
+  private _checarString(valor: string): void {
     if (typeof valor !== 'string') {
-      throw 'Valor deve ser uma string.';
+      throw new Error('Valor deve ser uma string.');
     }
   }
 }

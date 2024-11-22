@@ -5,8 +5,8 @@ class RespostaComandoEntity {
     constructor(objeto) {
         this._id = objeto._id;
         this.pattern = objeto.pattern;
-        this.imei = objeto.imei,
-            this.dataHora = objeto.dataHora;
+        this.imei = objeto.imei;
+        this.dataHora = objeto.dataHora;
         this.status = objeto.status;
         this.identificador = objeto.identificador;
     }
@@ -20,7 +20,7 @@ class RespostaComandoEntity {
             this._checarString(this.identificador);
             return true;
         }
-        catch (erro) {
+        catch (_erro) {
             return false;
         }
     }
@@ -38,12 +38,12 @@ class RespostaComandoEntity {
     }
     _checarString(valor) {
         if (typeof valor !== 'string') {
-            throw 'Valor deve ser uma string.';
+            throw new Error('Valor deve ser uma string.');
         }
     }
     _checarInteiro(valor) {
         if (valor.toString().match(/^\d+$/) === null) {
-            throw 'Valor deve ser um numero interio.';
+            throw new Error('Valor deve ser um numero interio.');
         }
     }
 }

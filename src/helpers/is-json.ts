@@ -1,7 +1,7 @@
-export function isJson (valor: string) {
+export function isJson(valor: string) {
   try {
     JSON.parse(valor);
-  } catch (erro) {
+  } catch (_erro) {
     return false;
   }
 

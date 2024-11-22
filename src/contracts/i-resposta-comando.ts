@@ -1,4 +1,4 @@
-import { ComandoStatus } from '../enums';
+import {ComandoStatus} from '../enums';
 
 export interface IRespostaComando {
   readonly _id: string,

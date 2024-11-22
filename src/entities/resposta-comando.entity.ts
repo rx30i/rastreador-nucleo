@@ -1,5 +1,5 @@
-import { ComandoStatus } from '../enums/comando-status';
-import { IRespostaComando } from '../contracts';
+import {ComandoStatus} from '../enums/comando-status';
+import {IRespostaComando} from '../contracts';
 
 /**
  * Para todo comando enviado pelo usuário é necessario retornar uma resposta, essa resposta
@@ -21,16 +21,16 @@ export class RespostaComandoEntity {
   public readonly identificador: string;
   public readonly imei: string;
 
-  constructor (objeto: IRespostaComando) {
+  constructor(objeto: IRespostaComando) {
     this._id           = objeto._id;
     this.pattern       = objeto.pattern;
-    this.imei          = objeto.imei,
+    this.imei          = objeto.imei;
     this.dataHora      = objeto.dataHora;
     this.status        = objeto.status;
     this.identificador = objeto.identificador;
   }
 
-  public validar (): boolean {
+  public validar(): boolean {
     try {
       this._checarString(this._id);
       this._checarString(this.pattern);
@@ -40,12 +40,12 @@ export class RespostaComandoEntity {
       this._checarString(this.identificador);
 
       return true;
-    } catch (erro) {
+    } catch (_erro) {
       return false;
     }
   }
 
-  public json (): string {
+  public json(): string {
     return JSON.stringify({
       pattern: this.pattern,
       data   : {
@@ -58,15 +58,15 @@ export class RespostaComandoEntity {
     });
   }
 
-  private _checarString (valor: string): void{
+  private _checarString(valor: string): void {
     if (typeof valor !== 'string') {
-      throw 'Valor deve ser uma string.';
+      throw new Error('Valor deve ser uma string.');
     }
   }
 
-  private _checarInteiro (valor: number): void {
+  private _checarInteiro(valor: number): void {
     if (valor.toString().match(/^\d+$/) === null) {
-      throw 'Valor deve ser um numero interio.';
+      throw new Error('Valor deve ser um numero interio.');
     }
   }
 }

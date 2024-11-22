@@ -1,6 +1,6 @@
-import { BaseRpcContext } from '@nestjs/microservices/ctx-host/base-rpc.context';
-import { ISocket } from '../../contracts';
-import { Socket } from 'net';
+import {BaseRpcContext} from '@nestjs/microservices/ctx-host/base-rpc.context';
+import {ISocket} from '../../contracts';
+import {Socket} from 'net';
 
 /**
  * Socket   => Conexão do cliente proprietário da mensagem autal.
@@ -11,11 +11,11 @@ import { Socket } from 'net';
 declare type TcpContextArgs = [Socket, string, (imei: string) => ISocket | null];
 
 export class TcpContext extends BaseRpcContext<TcpContextArgs> {
-  constructor (args: TcpContextArgs) {
+  constructor(args: TcpContextArgs) {
     super(args);
   }
 
-  public getSocketRef (imei?: string): ISocket | null {
+  public getSocketRef(imei?: string): ISocket | null {
     if (imei) {
       return this.args[2](imei);
     }
@@ -25,8 +25,9 @@ export class TcpContext extends BaseRpcContext<TcpContextArgs> {
 
   /**
    * Corresponde a mensagem original, a mensagem recebida pelo servidor TCP.
+   * @return {string}
    */
-  public mensagem (): string {
+  public mensagem(): string {
     return this.args[1];
   }
 }

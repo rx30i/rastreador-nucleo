@@ -20,13 +20,13 @@ class ComandoUsuarioEntity {
             this._checarString(this.imei);
             return true;
         }
-        catch (erro) {
+        catch (_erro) {
             return false;
         }
     }
     _checarString(valor) {
         if (typeof valor !== 'string') {
-            throw 'Valor deve ser uma string.';
+            throw new Error('Valor deve ser uma string.');
         }
     }
 }

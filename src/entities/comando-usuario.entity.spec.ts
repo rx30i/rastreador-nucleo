@@ -1,4 +1,4 @@
-import { ComandoUsuarioEntity } from './comando-usuario.entity';
+import {ComandoUsuarioEntity} from './comando-usuario.entity';
 
 describe('ComandoUsuarioEntity', () => {
   let comandoUsuarioEntity01: ComandoUsuarioEntity;
@@ -6,19 +6,21 @@ describe('ComandoUsuarioEntity', () => {
 
   beforeEach(() => {
     comandoUsuarioEntity01 = new ComandoUsuarioEntity({
-      id           : undefined,
-      integracao   : undefined,
-      identificador: undefined,
-      comando      : undefined,
-      imei         : undefined,
+      _id             : undefined,
+      modeloRastreador: undefined,
+      integracao      : undefined,
+      identificador   : undefined,
+      comando         : undefined,
+      imei            : undefined,
     });
 
     comandoUsuarioEntity02 = new ComandoUsuarioEntity({
-      id           : 10,
-      integracao   : 'suntech300',
-      identificador: 'bloquear',
-      comando      : 'ST300CMD;100850000;02;Enable1',
-      imei         : '100850000',
+      _id             : '10',
+      modeloRastreador: 'ST310U',
+      integracao      : 'suntech300',
+      identificador   : 'bloquear',
+      comando         : 'ST300CMD;100850000;02;Enable1',
+      imei            : '100850000',
     });
   });
 
@@ -34,11 +36,11 @@ describe('ComandoUsuarioEntity', () => {
 
   describe('Atribúto id', () => {
     it('Deve retornar "undefined"', () => {
-      expect(comandoUsuarioEntity01.id).toEqual(undefined);
+      expect(comandoUsuarioEntity01._id).toEqual(undefined);
     });
 
     it('Deve retornar "10"', () => {
-      expect(comandoUsuarioEntity02.id).toEqual(10);
+      expect(comandoUsuarioEntity02._id).toEqual('10');
     });
   });
 

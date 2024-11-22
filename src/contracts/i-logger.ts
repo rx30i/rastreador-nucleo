@@ -1,4 +1,4 @@
-import { LoggerService } from '@nestjs/common';
+import {LoggerService} from '@nestjs/common';
 
 export interface ILoger extends LoggerService {
   local (prefixo: string, mensagem: string | Record<string, any>): void;

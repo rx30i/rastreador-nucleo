@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { ConsumeMessage } from 'amqplib';
 import { ComandoUsuarioEntity } from '../entities';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';

@@ -1,1 +1,1 @@
-export { ServidorTcp } from './servidor-tcp';
+export {ServidorTcp} from './servidor-tcp';

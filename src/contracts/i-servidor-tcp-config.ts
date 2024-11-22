@@ -1,7 +1,7 @@
-import { IConsumerDeserializer } from './i-consumer-deserializer';
-import { Serializer } from '@nestjs/microservices';
-import { LoggerService } from '@nestjs/common';
-import { CodificacaoMsg } from '../enums';
+import {IConsumerDeserializer} from './i-consumer-deserializer';
+import {Serializer} from '@nestjs/microservices';
+import {LoggerService} from '@nestjs/common';
+import {CodificacaoMsg} from '../enums';
 
 export interface IServidorTCPConfig {
   deserializer: IConsumerDeserializer;

@@ -1,4 +1,4 @@
-import { QualidadeSinalGSM } from '../enums/qualidade-sinal-gsm';
+import {QualidadeSinalGSM} from '../enums/qualidade-sinal-gsm';
 
 export interface IQualidadeSingalGSM {
   readonly codigo: QualidadeSinalGSM;

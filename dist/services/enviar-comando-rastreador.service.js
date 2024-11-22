@@ -101,9 +101,7 @@ class EnviarComandoRastreadorService {
                 comando: mensagem.comando,
                 imei: mensagem.imei,
             });
-            return comandoEntity.valido()
-                ? comandoEntity
-                : undefined;
+            return comandoEntity.valido() ? comandoEntity : undefined;
         }
         catch (erro) {
             this.logger.capiturarException(erro);

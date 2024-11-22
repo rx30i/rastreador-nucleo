@@ -1,5 +1,5 @@
-import { MensagemConexaoFechadaEntity } from './mensagem-conexao-fechada.entity';
-import { HttpException } from '@nestjs/common';
+import {MensagemConexaoFechadaEntity} from './mensagem-conexao-fechada.entity';
+import {HttpException} from '@nestjs/common';
 
 describe('MensagemConexaoFechadaEntity', () => {
   let entidade01: MensagemConexaoFechadaEntity;

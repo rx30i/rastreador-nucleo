@@ -1,11 +1,11 @@
-import { ConsumeMessage, MessagePropertyHeaders, Channel } from 'amqplib';
-import { ComandoUsuarioEntity, RespostaComandoEntity } from '../entities';
-import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
-import { setTimeout } from 'node:timers/promises';
-import { ConfigService } from '@nestjs/config';
-import { ServidorTcp } from '../transport';
-import { ComandoStatus } from '../enums';
-import { ILoger } from '../contracts';
+import {ConsumeMessage, MessagePropertyHeaders, Channel} from 'amqplib';
+import {ComandoUsuarioEntity, RespostaComandoEntity} from '../entities';
+import {AmqpConnection} from '@golevelup/nestjs-rabbitmq';
+import {setTimeout} from 'node:timers/promises';
+import {ConfigService} from '@nestjs/config';
+import {ServidorTcp} from '../transport';
+import {ComandoStatus} from '../enums';
+import {ILoger} from '../contracts';
 
 /**
  * Quando o usuário envia um comando ao rastreador, esse comando primeiro vai para uma fila do rabbitMq,
@@ -27,7 +27,7 @@ export class EnviarComandoRastreadorService {
    */
   private tentativasEnvio = 720;
 
-  constructor (
+  constructor(
     private readonly amqpConnection: AmqpConnection,
     private readonly configService: ConfigService,
     private readonly logger: ILoger
@@ -41,9 +41,10 @@ export class EnviarComandoRastreadorService {
    * tenta se inscrever novamente na fila para ouvir as mensagens recebidas, se uma nova conexão não
    * foi realizada vai ser gerada uma exceção que não é tratada e isso finaliza a aplicação.
    *
-   * @returns {Promise<void>}
+   * @param  {function} callback
+   * @return {Promise<void>}
    */
-  public async receberMsgRabbitMq (callback: (mensagem: ConsumeMessage) => void): Promise<void> {
+  public async receberMsgRabbitMq(callback: (mensagem: ConsumeMessage) => void): Promise<void> {
     const filaComandos = this.configService.get<string>('RABBITMQ_FILA_COMANDO');
     if (!filaComandos) {
       this.logger.error('Variável de ambiente "RABBITMQ_FILA_COMANDO" não foi declarada no .env ');
@@ -72,7 +73,7 @@ export class EnviarComandoRastreadorService {
    * @param {Buffer} comando
    * @return {undefined}
    */
-  public enviarComando (mensagem: ConsumeMessage, comando: Buffer): undefined {
+  public enviarComando(mensagem: ConsumeMessage, comando: Buffer): undefined {
     const comandoEntity = this.decodificarMsg(mensagem);
     try {
       if (comandoEntity === undefined) {
@@ -104,9 +105,9 @@ export class EnviarComandoRastreadorService {
    * @param {boolean} msgEnviada
    * @param {ConsumeMessage} rabbitMqMsg
    * @param {ComandoUsuarioEntity} comando
-   * @returns {void}
+   * @return {void}
    */
-  private finalizarMsg (msgEnviada: boolean, rabbitMqMsg: ConsumeMessage, comando: ComandoUsuarioEntity): void {
+  private finalizarMsg(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage, comando: ComandoUsuarioEntity): void {
     if (msgEnviada === true) {
       this.channel.ack(rabbitMqMsg, false);
       this.publicarResposta(ComandoStatus.Enviado, comando);
@@ -120,10 +121,11 @@ export class EnviarComandoRastreadorService {
    * "RABBITMQ_FILA_COMANDO_PAUSA". Vai aguardar 5 segundos nessa fila ai depois é publicada
    * novamente na fila “RABBITMQ_FILA_COMANDO_PAUSA” e uma nova tentativa de envio é feita.
    *
-   * @param {ConsumeMessage} rabbitMqMsg
-   * @returns {void}
+   * @param  {boolean} msgEnviada
+   * @param  {ConsumeMessage} rabbitMqMsg
+   * @returs {void}
    */
-  private rejeitarMsg (msgEnviada: boolean, rabbitMqMsg: ConsumeMessage): void {
+  private rejeitarMsg(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage): void {
     const headers: MessagePropertyHeaders = rabbitMqMsg.properties?.headers;
     if (msgEnviada !== true && (!headers?.['x-death'] || headers['x-death'][0].count < this.tentativasEnvio)) {
       this.channel.nack(rabbitMqMsg, false, false);
@@ -138,9 +140,9 @@ export class EnviarComandoRastreadorService {
    * @param {boolean} msgEnviada
    * @param {ConsumeMessage} rabbitMqMsg
    * @param {ComandoUsuarioEntity} comando
-   * @returns {void}
+   * @return {void}
    */
-  private naoPodeSerEnviada (msgEnviada: boolean, rabbitMqMsg: ConsumeMessage, comando?: ComandoUsuarioEntity): void {
+  private naoPodeSerEnviada(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage, comando?: ComandoUsuarioEntity): void {
     const headers: MessagePropertyHeaders | undefined = rabbitMqMsg.properties?.headers;
     if (msgEnviada === true || !headers?.['x-death'] || headers['x-death'][0].count < this.tentativasEnvio) {
       return undefined;
@@ -166,7 +168,7 @@ export class EnviarComandoRastreadorService {
    * @param {Status} statusResposta
    * @param {ComandoUsuarioEntity} comando
    */
-  private publicarResposta (statusResposta: ComandoStatus, comando: ComandoUsuarioEntity): void {
+  private publicarResposta(statusResposta: ComandoStatus, comando: ComandoUsuarioEntity): void {
     const dataHora = new Date().toISOString();
     const pattern  = 'COMANDO';
 
@@ -193,10 +195,10 @@ export class EnviarComandoRastreadorService {
    * caso ocorra algum erro no processo, provavelmente a mesagem recebida não está no formato
    * esperado.
    *
-   * @param {ConsumeMessage} msg
-   * @returns {ComandoUsuarioEntity | undefined}
+   * @param  {ConsumeMessage} msg
+   * @return {ComandoUsuarioEntity | undefined}
    */
-  public decodificarMsg (msg: ConsumeMessage): ComandoUsuarioEntity{
+  public decodificarMsg(msg: ConsumeMessage): ComandoUsuarioEntity {
     try {
       const mensagem = JSON.parse(msg.content.toString('ascii'));
       const comandoEntity = new ComandoUsuarioEntity({
@@ -208,9 +210,7 @@ export class EnviarComandoRastreadorService {
         imei            : mensagem.imei,
       });
 
-      return comandoEntity.valido()
-        ? comandoEntity
-        : undefined;
+      return comandoEntity.valido() ? comandoEntity : undefined;
     } catch (erro) {
       this.logger.capiturarException(erro);
     }

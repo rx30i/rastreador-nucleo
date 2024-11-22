@@ -3,18 +3,18 @@ import * as amqplib from 'amqplib';
 type AssertQueue = amqplib.Replies.AssertQueue;
 
 export class DeclararFilasRabbitMqService {
-  constructor (
+  constructor(
     private readonly rabbitMqFilaCmdPausa: string,
     private readonly rabbitMqFilaCmd: string,
   ) {}
 
-  public async declararExchange (channel: amqplib.Channel): Promise<void> {
+  public async declararExchange(channel: amqplib.Channel): Promise<void> {
     await channel.assertExchange(
       'amq.direct', 'direct', {durable: true}
     );
   }
 
-  public async declararQueue (channel: amqplib.Channel): Promise<void> {
+  public async declararQueue(channel: amqplib.Channel): Promise<void> {
     await Promise.all([
       this.queueRastreadorErro(channel),
       this.queueRastreadorMensagem(channel),
@@ -24,7 +24,7 @@ export class DeclararFilasRabbitMqService {
     ]);
   }
 
-  public async bind (channel: amqplib.Channel): Promise<void> {
+  public async bind(channel: amqplib.Channel): Promise<void> {
     await Promise.all([
       channel.bindQueue('rastreador.mensagem.pausa', 'amq.direct', 'rastreador.mensagem.pausa'),
       channel.bindQueue('rastreador.mensagem', 'amq.direct', 'rastreador.mensagem'),
@@ -34,16 +34,16 @@ export class DeclararFilasRabbitMqService {
     ]);
   }
 
-  private queueRastreadorErro (channel: amqplib.Channel): Promise<AssertQueue> {
+  private queueRastreadorErro(channel: amqplib.Channel): Promise<AssertQueue> {
     return channel.assertQueue(
       'rastreador.erro', {durable: true}
     );
   }
 
-  private queueRastreadorMensagem (channel: amqplib.Channel): Promise<AssertQueue> {
+  private queueRastreadorMensagem(channel: amqplib.Channel): Promise<AssertQueue> {
     return channel.assertQueue(
       'rastreador.mensagem', {
-        durable: true,
+        durable  : true,
         arguments: {
           'x-dead-letter-exchange'   : 'amq.direct',
           'x-dead-letter-routing-key': 'rastreador.mensagem.pausa',
@@ -52,7 +52,7 @@ export class DeclararFilasRabbitMqService {
     );
   }
 
-  private queueRastreadorMensagemPausa (channel: amqplib.Channel): Promise<AssertQueue> {
+  private queueRastreadorMensagemPausa(channel: amqplib.Channel): Promise<AssertQueue> {
     return channel.assertQueue(
       'rastreador.mensagem.pausa', {
         durable  : true,
@@ -65,7 +65,7 @@ export class DeclararFilasRabbitMqService {
     );
   }
 
-  private queueRastreadorCmd (channel: amqplib.Channel): Promise<AssertQueue> {
+  private queueRastreadorCmd(channel: amqplib.Channel): Promise<AssertQueue> {
     return channel.assertQueue(
       this.rabbitMqFilaCmd, {
         durable  : true,
@@ -77,7 +77,7 @@ export class DeclararFilasRabbitMqService {
     );
   }
 
-  private queueRastreadorCmdPausa (channel: amqplib.Channel): Promise<AssertQueue> {
+  private queueRastreadorCmdPausa(channel: amqplib.Channel): Promise<AssertQueue> {
     return channel.assertQueue(
       this.rabbitMqFilaCmdPausa, {
         durable  : true,

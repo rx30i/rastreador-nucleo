@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.encerrarApp = void 0;
+exports.encerrarApp = encerrarApp;
 const Sentry = require("@sentry/node");
 function encerrarApp(app, codigo, erro) {
     if (erro instanceof Error) {
@@ -11,5 +11,4 @@ function encerrarApp(app, codigo, erro) {
         process.exit(codigo);
     }, 1000);
 }
-exports.encerrarApp = encerrarApp;
 //# sourceMappingURL=encerrar-app.js.map
