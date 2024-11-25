@@ -149,7 +149,7 @@ class ServidorTcp extends microservices_1.Server {
             return arrayMensagens;
         }
         const codificacao = this.configuracao.codificacaoMsg;
-        const delimitador = this.configuracao.delimitadorMsg;
+        const delimitador = `[${this.configuracao.delimitadorMsg}]`;
         const demaisMsg = mensagem.toString(codificacao);
         if (demaisMsg.slice(0, delimitador.length) === delimitador &&
             (demaisMsg.match(new RegExp(delimitador, 'g')) || []).length > 0) {
