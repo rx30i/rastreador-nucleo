@@ -301,7 +301,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
 
     // Mensagens enviadas pelos rastreadores
     const codificacao = this.configuracao.codificacaoMsg;
-    const delimitador = this.configuracao.delimitadorMsg;
+    const delimitador = `[${this.configuracao.delimitadorMsg}]`;
     const demaisMsg   = mensagem.toString(codificacao);
 
     if (demaisMsg.slice(0, delimitador.length) === delimitador &&
