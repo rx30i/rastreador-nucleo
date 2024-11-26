@@ -16,5 +16,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./geo-json-point"), exports);
 __exportStar(require("./encerrar-app"), exports);
+__exportStar(require("./hex-para-dec"), exports);
+__exportStar(require("./hex-para-bin"), exports);
 __exportStar(require("./is-json"), exports);
 //# sourceMappingURL=index.js.map
