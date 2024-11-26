@@ -81,8 +81,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
         if (consumidor === null) {
           const erro = 'Não há um consumidor para a mensagem';
           this.configuracao.tratarErro.error(
-            'ServidorTcp',
-            `${erro} : ${resposta}`
+            `Class ServidorTcp ${erro} ${resposta}`
           );
 
           continue;

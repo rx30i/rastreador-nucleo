@@ -11,22 +11,18 @@ export class LoggerService extends ConsoleLogger {
   }
 
   public error(message: any, stack?: string, context?: string): void {
+    const erros    = [message, stack, context];
+    const resposta = erros.filter((valor) => {
+      return valor ? true : false;
+    });
+
     if (this.configService.get<string>('APP_ENV') !== 'producao') {
-      super.error(message.name, message.message, message?.stack);
+      super.error(resposta.toString());
       return;
     }
 
-    if (typeof message === 'object') {
-      message = JSON.stringify(message);
-    }
-
-    const erro  = `{
-      "message": ${message}
-      "stack"  : ${stack}
-      "context": ${context}
-    }`;
-
-    Sentry.captureMessage(erro, 'error');
+    Sentry.captureMessage(resposta.toString(), 'error');
+    super.error(resposta.toString());
   }
 
   public local(prefixo: string, mensagem: string | Record<string, any>) {

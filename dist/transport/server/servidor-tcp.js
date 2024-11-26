@@ -46,7 +46,7 @@ class ServidorTcp extends microservices_1.Server {
                 const consumidor = this.getHandlerByPattern(msgFormatada.pattern);
                 if (consumidor === null) {
                     const erro = 'Não há um consumidor para a mensagem';
-                    this.configuracao.tratarErro.error('ServidorTcp', `${erro} : ${resposta}`);
+                    this.configuracao.tratarErro.error(`Class ServidorTcp ${erro} ${resposta}`);
                     continue;
                 }
                 consumidor?.isEventHandler
