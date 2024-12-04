@@ -20,5 +20,6 @@ var IdentificadoresComandos;
     IdentificadoresComandos["CMD_ALERTA_MOVIMENTO"] = "CMD_ALERTA_MOVIMENTO";
     IdentificadoresComandos["CMD_ALERTA_BT_RASTREADOR_BAIXA"] = "CMD_ALERTA_BT_RASTREADOR_BAIXA";
     IdentificadoresComandos["CMD_ALERTA_RASTREADOR_DESLIGADO"] = "CMD_ALERTA_RASTREADOR_DESLIGADO";
+    IdentificadoresComandos["CMD_ATIVAR_MODO_ANTI_FURTO"] = "CMD_ATIVAR_MODO_ANTI_FURTO";
 })(IdentificadoresComandos || (exports.IdentificadoresComandos = IdentificadoresComandos = {}));
 //# sourceMappingURL=identificadores-comandos.js.map
