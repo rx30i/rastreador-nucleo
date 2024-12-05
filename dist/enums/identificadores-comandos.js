@@ -23,5 +23,6 @@ var IdentificadoresComandos;
     IdentificadoresComandos["CMD_ATIVAR_MODO_ANTI_FURTO"] = "CMD_ATIVAR_MODO_ANTI_FURTO";
     IdentificadoresComandos["CMD_SOLICITAR_STATUS"] = "CMD_SOLICITAR_STATUS";
     IdentificadoresComandos["CMD_CONFIGURAR_INTERVALO_ENVIO_DADOS"] = "CMD_CONFIGURAR_INTERVALO_ENVIO_DADOS";
+    IdentificadoresComandos["CMD_CONFIGURAR_IDIOMA"] = "CMD_CONFIGURAR_IDIOMA";
 })(IdentificadoresComandos || (exports.IdentificadoresComandos = IdentificadoresComandos = {}));
 //# sourceMappingURL=identificadores-comandos.js.map
