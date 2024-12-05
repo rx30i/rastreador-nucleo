@@ -18,4 +18,5 @@ export enum IdentificadoresComandos {
   CMD_ALERTA_BT_RASTREADOR_BAIXA = 'CMD_ALERTA_BT_RASTREADOR_BAIXA',   // Ativar alerta bateria rastreador baixa
   CMD_ALERTA_RASTREADOR_DESLIGADO = 'CMD_ALERTA_RASTREADOR_DESLIGADO', // Ativar alerta que vai informar que o rastreador foi desligado.
   CMD_ATIVAR_MODO_ANTI_FURTO = 'CMD_ATIVAR_MODO_ANTI_FURTO',           // Ativar modo antirroubo.
+  CMD_SOLICITAR_STATUS = 'CMD_SOLICITAR_STATUS',                       // Ativar modo antirroubo.
 }
