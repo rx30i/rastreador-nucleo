@@ -22,6 +22,6 @@ var IdentificadoresComandos;
     IdentificadoresComandos["CMD_ALERTA_RASTREADOR_DESLIGADO"] = "CMD_ALERTA_RASTREADOR_DESLIGADO";
     IdentificadoresComandos["CMD_ATIVAR_MODO_ANTI_FURTO"] = "CMD_ATIVAR_MODO_ANTI_FURTO";
     IdentificadoresComandos["CMD_SOLICITAR_STATUS"] = "CMD_SOLICITAR_STATUS";
-    IdentificadoresComandos["CMD_CONFIGURAR_TEMPO_COMUNICACAO"] = "CMD_CONFIGURAR_TEMPO_COMUNICACAO";
+    IdentificadoresComandos["CMD_CONFIGURAR_INTERVALO_ENVIO_DADOS"] = "CMD_CONFIGURAR_INTERVALO_ENVIO_DADOS";
 })(IdentificadoresComandos || (exports.IdentificadoresComandos = IdentificadoresComandos = {}));
 //# sourceMappingURL=identificadores-comandos.js.map
