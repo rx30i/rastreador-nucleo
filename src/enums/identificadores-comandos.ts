@@ -21,4 +21,9 @@ export enum IdentificadoresComandos {
   CMD_SOLICITAR_STATUS = 'CMD_SOLICITAR_STATUS',                                  // Ativar modo antirroubo.
   CMD_CONFIGURAR_INTERVALO_ENVIO_DADOS = 'CMD_CONFIGURAR_INTERVALO_ENVIO_DADOS',  // Intervalo de envio dos dados
   CMD_CONFIGURAR_IDIOMA = 'CMD_CONFIGURAR_IDIOMA',                                // Idioma usado pelo rastreador
+  CMD_CONFIGURAR_SENHA_PADRAO = 'CMD_CONFIGURAR_SENHA_PADRAO',                    // Configurar senha padrão
+  CMD_CONFIGURAR_PROTOCOLO_COMUNICACAO = 'CMD_CONFIGURAR_PROTOCOLO_COMUNICACAO',  // Define qual o protocolo de comunicação o rastreador vai usar (TCP, UDP)
+  CMD_OBTER_ICCID = 'CMD_OBTER_ICCID',                                            // Obter ICCID do chip
+  CMD_OBTER_CONFIGURACAO_RASTREADOR = 'CMD_OBTER_CONFIGURACAO_RASTREADOR',        // Obter configuração atual do rastreador
+  CMD_OBTER_VERSAO_FIRMWARE = 'CMD_OBTER_VERSAO_FIRMWARE',                        // Obter versão firmware
 }
