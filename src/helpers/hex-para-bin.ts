@@ -5,9 +5,9 @@ import {hexParaDec} from './hex-para-dec';
  * a quatro digitos binários.
  *
  * @param  {string} mensagem
- * @return {string}
+ * @return {string | undefined}
  */
-export function hexParaBin(mensagem: string): string {
+export function hexParaBin(mensagem: string): string | undefined {
   if (!mensagem || typeof mensagem !== 'string') {
     return undefined;
   }

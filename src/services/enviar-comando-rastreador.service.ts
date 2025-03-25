@@ -198,7 +198,7 @@ export class EnviarComandoRastreadorService {
    * @param  {ConsumeMessage} msg
    * @return {ComandoUsuarioEntity | undefined}
    */
-  public decodificarMsg(msg: ConsumeMessage): ComandoUsuarioEntity {
+  public decodificarMsg(msg: ConsumeMessage): ComandoUsuarioEntity | undefined {
     try {
       const mensagem = JSON.parse(msg.content.toString('ascii'));
       const comandoEntity = new ComandoUsuarioEntity({
