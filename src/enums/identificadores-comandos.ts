@@ -20,6 +20,7 @@ export enum IdentificadoresComandos {
   CMD_ATIVAR_MODO_ANTI_FURTO = 'CMD_ATIVAR_MODO_ANTI_FURTO',                      // Ativar modo antirroubo.
   CMD_SOLICITAR_STATUS = 'CMD_SOLICITAR_STATUS',                                  // Ativar modo antirroubo.
   CMD_CONFIGURAR_INTERVALO_ENVIO_DADOS = 'CMD_CONFIGURAR_INTERVALO_ENVIO_DADOS',  // Intervalo de envio dos dados
+  CMD_OBTER_INTERVALO_ENVIO_DADOS = 'CMD_OBTER_INTERVALO_ENVIO_DADOS',            // Obter intervalo de envio dos dados
   CMD_CONFIGURAR_IDIOMA = 'CMD_CONFIGURAR_IDIOMA',                                // Idioma usado pelo rastreador
   CMD_CONFIGURAR_SENHA_PADRAO = 'CMD_CONFIGURAR_SENHA_PADRAO',                    // Configurar senha padrão
   CMD_CONFIGURAR_PROTOCOLO_COMUNICACAO = 'CMD_CONFIGURAR_PROTOCOLO_COMUNICACAO',  // Define qual o protocolo de comunicação o rastreador vai usar (TCP, UDP)
