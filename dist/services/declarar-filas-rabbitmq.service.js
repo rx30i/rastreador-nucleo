@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeclararFilasRabbitMqService = void 0;
 class DeclararFilasRabbitMqService {
+    rabbitMqFilaCmdPausa;
+    rabbitMqFilaCmd;
     constructor(rabbitMqFilaCmdPausa, rabbitMqFilaCmd) {
         this.rabbitMqFilaCmdPausa = rabbitMqFilaCmdPausa;
         this.rabbitMqFilaCmd = rabbitMqFilaCmd;

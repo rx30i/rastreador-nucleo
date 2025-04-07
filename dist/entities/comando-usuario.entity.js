@@ -2,6 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ComandoUsuarioEntity = void 0;
 class ComandoUsuarioEntity {
+    _id;
+    modeloRastreador;
+    integracao;
+    identificador;
+    comando;
+    imei;
     constructor(dados) {
         this._id = dados._id;
         this.modeloRastreador = dados.modeloRastreador;

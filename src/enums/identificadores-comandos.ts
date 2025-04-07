@@ -26,4 +26,5 @@ export enum IdentificadoresComandos {
   CMD_OBTER_ICCID = 'CMD_OBTER_ICCID',                                            // Obter ICCID do chip
   CMD_OBTER_CONFIGURACAO_RASTREADOR = 'CMD_OBTER_CONFIGURACAO_RASTREADOR',        // Obter configuração atual do rastreador
   CMD_OBTER_VERSAO_FIRMWARE = 'CMD_OBTER_VERSAO_FIRMWARE',                        // Obter versão firmware
+  CMD_OBTER_INFORMACOES_RASTREADOR = 'CMD_OBTER_INFORMACOES_RASTREADOR',          // Obter informações do rastreador, como versão do firmware, do hardware e o número de série.
 }

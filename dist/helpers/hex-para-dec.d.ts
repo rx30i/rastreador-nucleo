@@ -1,1 +1,1 @@
-export declare function hexParaDec(mensagem: string): number;
+export declare function hexParaDec(mensagem: string): number | undefined;

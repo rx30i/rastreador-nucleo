@@ -13,6 +13,7 @@ exports.SalvarMsgRepository = void 0;
 const nestjs_rabbitmq_1 = require("@golevelup/nestjs-rabbitmq");
 const common_1 = require("@nestjs/common");
 let SalvarMsgRepository = class SalvarMsgRepository {
+    amqpConnection;
     constructor(amqpConnection) {
         this.amqpConnection = amqpConnection;
     }

@@ -126,7 +126,7 @@ export class EnviarComandoRastreadorService {
    * @returs {void}
    */
   private rejeitarMsg(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage): void {
-    const headers: MessagePropertyHeaders = rabbitMqMsg.properties?.headers;
+    const headers = rabbitMqMsg.properties?.headers as MessagePropertyHeaders;
     if (msgEnviada !== true && (!headers?.['x-death'] || headers['x-death'][0].count < this.tentativasEnvio)) {
       this.channel.nack(rabbitMqMsg, false, false);
     }

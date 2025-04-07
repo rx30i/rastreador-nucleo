@@ -14,6 +14,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const Sentry = require("@sentry/node");
 let LoggerService = class LoggerService extends common_1.ConsoleLogger {
+    configService;
     constructor(configService) {
         super('LoggerService');
         this.configService = configService;

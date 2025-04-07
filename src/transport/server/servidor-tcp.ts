@@ -1,4 +1,4 @@
-import {WritePacket, PacketId, IncomingEvent, Server} from '@nestjs/microservices';
+import {WritePacket, PacketId, IncomingEvent, Server, BaseRpcContext} from '@nestjs/microservices';
 import {CustomTransportStrategy, IncomingRequest} from '@nestjs/microservices';
 import {IServidorTCPConfig, ISocket} from '../../contracts';
 import {StringDecoder} from 'node:string_decoder';
@@ -27,7 +27,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
 
   /**
    * @override
-   * */
+  * */
   public listen(callback: () => void) {
     this.servidor = Net.createServer((socket: ISocket) => {
       this.mensagem(socket);
@@ -42,11 +42,28 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   }
 
   /**
+   * @override
+   *
+   * @param {string} event
+   * @param {Function} callback
+   */
+  public on(event: string, callback: Function) {
+    throw new Error('Method not implemented.');
+  }
+
+  /**
+   * @override
+   */
+  public unwrap<T = never>(): T {
+    throw new Error('Method not implemented.');
+  }
+
+  /**
    * Obtem a conexão, o socket do cliente que o imei representa.
    *
    * @param {imei} imei
    * @return {ISocket | null}
-   */
+ */
   public static obterConexao(imei: string): ISocket | null {
     const resposta = ServidorTcp.conexoesTcp.get(imei);
     if (resposta === undefined) {
@@ -58,7 +75,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
 
   /**
    * @override
-   * */
+  * */
   public close(): void {
     if (this.servidor !== undefined) {
       this.servidor.close();
@@ -102,18 +119,21 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   private async messagePattern(tcpContexto: TcpContext, msgFormatada: MsgRecebida): Promise<void> {
     const mensagem   = msgFormatada as IncomingRequest;
     const consumidor = this.getHandlerByPattern(mensagem.pattern);
+    if (consumidor === null) {
+      return;
+    }
+
     const response$  = this.transformToObservable(
       await consumidor(mensagem.data, tcpContexto),
     ) as Observable<any>;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     response$ && this.send(response$, (data) => {
       Object.assign(data, {id: mensagem.id});
       const outgoingResponse = this.serializer.serialize(
         data as WritePacket & PacketId,
       );
 
-      tcpContexto.getSocketRef().write(
+      tcpContexto.getSocketRef()?.write(
         Buffer.from(this.formatarResposta(outgoingResponse))
       );
     });
@@ -157,10 +177,10 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
 
   /**
    * Remove o cliente que se desconectou da lista de conexões ativas. Também emite um evento
-   * cujo o patter é "conexaoFechada" caso haja um consumidor para esse evento.
+   * cujo o patter é "CONEXAO_FECHADA" caso haja um consumidor para esse evento.
    *
    * Exemplo evento emitido:
-   *  {pattern: 'conexaoFechada', data: {imei: '000000001', dataHora: '2021-02-12T19:18:15.000Z'}}
+   *  {pattern: 'CONEXAO_FECHADA', data: {imei: '000000001', dataHora: '2021-02-12T19:18:15.000Z'}}
    *
    * @param {ISocket} socket
    * @return {void}
@@ -175,7 +195,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
       const evento = {pattern: Pattern.CONEXAO_FECHADA, data: {imei: imei, dataHora: tempo}};
       const consumidorEvento = this.getHandlerByPattern(evento.pattern);
       if (consumidorEvento?.isEventHandler) {
-        this.handleEvent(evento.pattern, evento, undefined);
+        this.handleEvent(evento.pattern, evento, {} as BaseRpcContext);
       }
     }
 
@@ -254,7 +274,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
       const evento = {pattern: Pattern.QTD_DISPOSITIVOS_CONECTADOS, data: {qtd: quantidade, dataHora: tempo}};
       const consumidorEvento = this.getHandlerByPattern(evento.pattern);
       if (consumidorEvento?.isEventHandler) {
-        this.handleEvent(evento.pattern, evento, undefined);
+        this.handleEvent(evento.pattern, evento, {} as BaseRpcContext);
       }
     });
   }
@@ -307,10 +327,10 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
     (demaisMsg.match(new RegExp(delimitador, 'g')) || []).length > 0) {
       const msgAtualizada = demaisMsg.replace(new RegExp(delimitador, 'g'), `@@@${delimitador}`);
       const conjutoMsg    = msgAtualizada.split('@@@');
-      const novaResposta  = [];
+      const novaResposta  = <Array<string>>[];
 
       for (const resposta of conjutoMsg) {
-        if (resposta !== '') {
+        if (typeof resposta === 'string' && resposta !== '') {
           novaResposta.push(resposta.replace(/(\r\n|\n|\r)/gm, ''));
         }
       }

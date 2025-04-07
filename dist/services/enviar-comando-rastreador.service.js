@@ -6,11 +6,15 @@ const promises_1 = require("node:timers/promises");
 const transport_1 = require("../transport");
 const enums_1 = require("../enums");
 class EnviarComandoRastreadorService {
+    amqpConnection;
+    configService;
+    logger;
+    channel;
+    tentativasEnvio = 720;
     constructor(amqpConnection, configService, logger) {
         this.amqpConnection = amqpConnection;
         this.configService = configService;
         this.logger = logger;
-        this.tentativasEnvio = 720;
     }
     async receberMsgRabbitMq(callback) {
         const filaComandos = this.configService.get('RABBITMQ_FILA_COMANDO');

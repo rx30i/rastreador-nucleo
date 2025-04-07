@@ -7,9 +7,12 @@ const ctx_host_1 = require("../ctx-host");
 const enums_1 = require("../../enums");
 const Net = require("node:net");
 class ServidorTcp extends microservices_1.Server {
+    stringDecoder = new node_string_decoder_1.StringDecoder();
+    configuracao;
+    static conexoesTcp;
+    servidor;
     constructor(configuracao) {
         super();
-        this.stringDecoder = new node_string_decoder_1.StringDecoder();
         ServidorTcp.conexoesTcp = new Map();
         this.configuracao = configuracao;
         this.initializeDeserializer(configuracao);
@@ -25,6 +28,12 @@ class ServidorTcp extends microservices_1.Server {
         });
         const configuracao = this.configuracao.servidor;
         this.servidor.listen(configuracao, callback);
+    }
+    on(event, callback) {
+        throw new Error('Method not implemented.');
+    }
+    unwrap() {
+        throw new Error('Method not implemented.');
     }
     static obterConexao(imei) {
         const resposta = ServidorTcp.conexoesTcp.get(imei);
@@ -59,11 +68,14 @@ class ServidorTcp extends microservices_1.Server {
     async messagePattern(tcpContexto, msgFormatada) {
         const mensagem = msgFormatada;
         const consumidor = this.getHandlerByPattern(mensagem.pattern);
+        if (consumidor === null) {
+            return;
+        }
         const response$ = this.transformToObservable(await consumidor(mensagem.data, tcpContexto));
         response$ && this.send(response$, (data) => {
             Object.assign(data, { id: mensagem.id });
             const outgoingResponse = this.serializer.serialize(data);
-            tcpContexto.getSocketRef().write(Buffer.from(this.formatarResposta(outgoingResponse)));
+            tcpContexto.getSocketRef()?.write(Buffer.from(this.formatarResposta(outgoingResponse)));
         });
     }
     async eventPattern(tcpContexto, evento) {
@@ -89,7 +101,7 @@ class ServidorTcp extends microservices_1.Server {
             const evento = { pattern: enums_1.Pattern.CONEXAO_FECHADA, data: { imei: imei, dataHora: tempo } };
             const consumidorEvento = this.getHandlerByPattern(evento.pattern);
             if (consumidorEvento?.isEventHandler) {
-                this.handleEvent(evento.pattern, evento, undefined);
+                this.handleEvent(evento.pattern, evento, {});
             }
         }
         socket.end();
@@ -128,7 +140,7 @@ class ServidorTcp extends microservices_1.Server {
             const evento = { pattern: enums_1.Pattern.QTD_DISPOSITIVOS_CONECTADOS, data: { qtd: quantidade, dataHora: tempo } };
             const consumidorEvento = this.getHandlerByPattern(evento.pattern);
             if (consumidorEvento?.isEventHandler) {
-                this.handleEvent(evento.pattern, evento, undefined);
+                this.handleEvent(evento.pattern, evento, {});
             }
         });
     }
@@ -157,7 +169,7 @@ class ServidorTcp extends microservices_1.Server {
             const conjutoMsg = msgAtualizada.split('@@@');
             const novaResposta = [];
             for (const resposta of conjutoMsg) {
-                if (resposta !== '') {
+                if (typeof resposta === 'string' && resposta !== '') {
                     novaResposta.push(resposta.replace(/(\r\n|\n|\r)/gm, ''));
                 }
             }

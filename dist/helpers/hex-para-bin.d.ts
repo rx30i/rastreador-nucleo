@@ -1,1 +1,1 @@
-export declare function hexParaBin(mensagem: string): string;
+export declare function hexParaBin(mensagem: string): string | undefined;

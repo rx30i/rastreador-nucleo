@@ -4,6 +4,11 @@ exports.MensagemConexaoFechadaEntity = void 0;
 const common_1 = require("@nestjs/common");
 const pattern_1 = require("../enums/pattern");
 class MensagemConexaoFechadaEntity {
+    dataHora;
+    imei;
+    integracao;
+    pattern;
+    online;
     constructor(dataHora, imei, integracao) {
         this.dataHora = this.obterDataHora(dataHora);
         this.imei = this.obterString(imei);

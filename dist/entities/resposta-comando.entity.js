@@ -2,6 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RespostaComandoEntity = void 0;
 class RespostaComandoEntity {
+    _id;
+    pattern;
+    dataHora;
+    status;
+    identificador;
+    imei;
     constructor(objeto) {
         this._id = objeto._id;
         this.pattern = objeto.pattern;
