@@ -29,5 +29,5 @@ export enum IdentificadoresComandos {
   CMD_OBTER_VERSAO_FIRMWARE = 'CMD_OBTER_VERSAO_FIRMWARE',                              // Obter versão firmware
   CMD_OBTER_INFORMACOES_RASTREADOR = 'CMD_OBTER_INFORMACOES_RASTREADOR',                // Obter informações do rastreador, como versão do firmware, do hardware e o número de série.
   CMD_CONFIGURAR_ANGLE_DIST_OVERSPD= 'CMD_CONFIGURAR_ANGLE_DIST_OVERSPD',               // Configura o ângulo para envio de dados, envio de dados pela distância percorrida e velocidade máxima permitida.
-  CMD_OBTER_CONFIGURACAO_ANGLE_DIST_OVERSPD= 'CMD_OBTER_CONFIGURAR_ANGLE_DIST_OVERSPD', // Obter o ângulo para envio de dados, envio de dados pela distância percorrida e velocidade máxima permitida.
+  CMD_OBTER_CONFIGURACAO_ANGLE_DIST_OVERSPD= 'CMD_OBTER_CONFIGURACAO_ANGLE_DIST_OVERSPD', // Obter o ângulo para envio de dados, envio de dados pela distância percorrida e velocidade máxima permitida.
 }
