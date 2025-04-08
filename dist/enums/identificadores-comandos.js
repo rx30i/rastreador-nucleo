@@ -31,5 +31,7 @@ var IdentificadoresComandos;
     IdentificadoresComandos["CMD_OBTER_CONFIGURACAO_RASTREADOR"] = "CMD_OBTER_CONFIGURACAO_RASTREADOR";
     IdentificadoresComandos["CMD_OBTER_VERSAO_FIRMWARE"] = "CMD_OBTER_VERSAO_FIRMWARE";
     IdentificadoresComandos["CMD_OBTER_INFORMACOES_RASTREADOR"] = "CMD_OBTER_INFORMACOES_RASTREADOR";
+    IdentificadoresComandos["CMD_CONFIGURAR_ANGLE_DIST_OVERSPD"] = "CMD_CONFIGURAR_ANGLE_DIST_OVERSPD";
+    IdentificadoresComandos["CMD_OBTER_CONFIGURAR_ANGLE_DIST_OVERSPD"] = "CMD_OBTER_CONFIGURAR_ANGLE_DIST_OVERSPD";
 })(IdentificadoresComandos || (exports.IdentificadoresComandos = IdentificadoresComandos = {}));
 //# sourceMappingURL=identificadores-comandos.js.map
