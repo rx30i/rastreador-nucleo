@@ -340,4 +340,57 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
 
     return [demaisMsg];
   }
+
+  /**
+   * @deprecated
+  */
+  private separarMsgPeloDelimitador() {
+
+  }
+
+  private separarMsgPeloPrefixo() {
+
+  }
+
+  private separarMsgPeloSufixo() {
+
+  }
+
+  /**
+   * @param  {string} mensagem
+   * @return {string[]}
+  */
+  private separarMsgPeloPrefixoSufixo(mensagem: string): string[] {
+    let posicaoAtual: number  = 0;
+    const mensagens: string[] = [];
+    const prefixo = this.configuracao.prefixo ?? '';
+    const sufixo  = this.configuracao.sufixo ?? '';
+
+    const msgNormalizada = mensagem.toLowerCase();
+    while(posicaoAtual < msgNormalizada.length) {
+      const posicaoPrefixo = msgNormalizada.indexOf(prefixo, posicaoAtual);
+      if (posicaoPrefixo === -1) {
+        posicaoAtual = posicaoAtual;
+        break;
+      }
+
+      const inicioBuscaSufixo = posicaoPrefixo + prefixo.length;
+      const posicaoSufixo     = msgNormalizada.indexOf(sufixo, inicioBuscaSufixo);
+      if (posicaoSufixo === -1) {
+        posicaoAtual = posicaoPrefixo;
+        break;
+      }
+
+      // Encontrou uma mensagem COMPLETA!
+      // A mensagem completa vai do 'startIndex' até o final do 'END_SEQUENCE'.
+      const fimMensagem = posicaoSufixo + sufixo.length;
+      const msgCompleta = msgNormalizada.substring(posicaoPrefixo, fimMensagem);
+      mensagens.push(msgCompleta);
+
+      // Atualiza a posição atual para continuar a busca a partir do fim da mensagem encontrada
+      posicaoAtual = fimMensagem;
+    }
+
+    return mensagens;
+  }
 }
