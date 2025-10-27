@@ -11,5 +11,7 @@ export interface IServidorTCPConfig {
     };
     tratarErro: LoggerService;
     delimitadorMsg: string;
+    prefixo?: string;
+    sufixo?: string;
     codificacaoMsg: CodificacaoMsg;
 }

@@ -177,6 +177,37 @@ class ServidorTcp extends microservices_1.Server {
         }
         return [demaisMsg];
     }
+    separarMsgPeloDelimitador() {
+    }
+    separarMsgPeloPrefixo() {
+    }
+    separarMsgPeloSufixo() {
+    }
+    separarMsgPeloPrefixoSufixo(mensagem) {
+        let posicaoAtual = 0;
+        const mensagens = [];
+        const prefixo = this.configuracao.prefixo ?? '';
+        const sufixo = this.configuracao.sufixo ?? '';
+        const msgNormalizada = mensagem.toLowerCase();
+        while (posicaoAtual < msgNormalizada.length) {
+            const posicaoPrefixo = msgNormalizada.indexOf(prefixo, posicaoAtual);
+            if (posicaoPrefixo === -1) {
+                posicaoAtual = posicaoAtual;
+                break;
+            }
+            const inicioBuscaSufixo = posicaoPrefixo + prefixo.length;
+            const posicaoSufixo = msgNormalizada.indexOf(sufixo, inicioBuscaSufixo);
+            if (posicaoSufixo === -1) {
+                posicaoAtual = posicaoPrefixo;
+                break;
+            }
+            const fimMensagem = posicaoSufixo + sufixo.length;
+            const msgCompleta = msgNormalizada.substring(posicaoPrefixo, fimMensagem);
+            mensagens.push(msgCompleta);
+            posicaoAtual = fimMensagem;
+        }
+        return mensagens;
+    }
 }
 exports.ServidorTcp = ServidorTcp;
 //# sourceMappingURL=servidor-tcp.js.map
