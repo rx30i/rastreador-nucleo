@@ -1,11 +1,13 @@
 import {WritePacket, PacketId, IncomingEvent, Server, BaseRpcContext} from '@nestjs/microservices';
 import {CustomTransportStrategy, IncomingRequest} from '@nestjs/microservices';
 import {IServidorTCPConfig, ISocket} from '../../contracts';
+import { SepararMensagens } from './separar-mensagens';
 import {StringDecoder} from 'node:string_decoder';
 import {TcpContext} from '../ctx-host';
 import {Pattern} from '../../enums';
 import {Observable} from 'rxjs';
 import * as Net from 'node:net';
+
 
 declare type MsgRecebida = IncomingRequest | IncomingEvent | Promise<IncomingRequest | IncomingEvent>;
 
@@ -13,6 +15,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   private readonly stringDecoder: StringDecoder = new StringDecoder();
   private readonly configuracao: IServidorTCPConfig;
   private static conexoesTcp: Map<string, ISocket>;
+  private readonly separarMsgs: SepararMensagens;
   private servidor: Net.Server;
 
   constructor(configuracao: IServidorTCPConfig) {
@@ -20,6 +23,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
 
     ServidorTcp.conexoesTcp = new Map();
     this.configuracao = configuracao;
+    this.separarMsgs  = new SepararMensagens(this.configuracao);
 
     this.initializeDeserializer(configuracao);
     this.initializeSerializer(configuracao);
@@ -296,7 +300,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    *
    * @param {Buffer} mensagem
    * @return {string[]}
-   */
+  */
   public separarMensagens(mensagem: Buffer): string[] {
     // Mensagens enviadas por uma aplicação Nest
     let mensagemString = this.stringDecoder.write(mensagem);
@@ -320,77 +324,8 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
 
     // Mensagens enviadas pelos rastreadores
     const codificacao = this.configuracao.codificacaoMsg;
-    const delimitador = `[${this.configuracao.delimitadorMsg}]`;
     const demaisMsg   = mensagem.toString(codificacao);
 
-    if (demaisMsg.slice(0, delimitador.length) === delimitador &&
-    (demaisMsg.match(new RegExp(delimitador, 'g')) || []).length > 0) {
-      const msgAtualizada = demaisMsg.replace(new RegExp(delimitador, 'g'), `@@@${delimitador}`);
-      const conjutoMsg    = msgAtualizada.split('@@@');
-      const novaResposta  = <Array<string>>[];
-
-      for (const resposta of conjutoMsg) {
-        if (typeof resposta === 'string' && resposta !== '') {
-          novaResposta.push(resposta.replace(/(\r\n|\n|\r)/gm, ''));
-        }
-      }
-
-      return novaResposta;
-    }
-
-    return [demaisMsg];
-  }
-
-  /**
-   * @deprecated
-  */
-  private separarMsgPeloDelimitador() {
-
-  }
-
-  private separarMsgPeloPrefixo() {
-
-  }
-
-  private separarMsgPeloSufixo() {
-
-  }
-
-  /**
-   * @param  {string} mensagem
-   * @return {string[]}
-  */
-  private separarMsgPeloPrefixoSufixo(mensagem: string): string[] {
-    let posicaoAtual: number  = 0;
-    const mensagens: string[] = [];
-    const prefixo = this.configuracao.prefixo ?? '';
-    const sufixo  = this.configuracao.sufixo ?? '';
-
-    const msgNormalizada = mensagem.toLowerCase();
-    while(posicaoAtual < msgNormalizada.length) {
-      const posicaoPrefixo = msgNormalizada.indexOf(prefixo, posicaoAtual);
-      if (posicaoPrefixo === -1) {
-        posicaoAtual = posicaoAtual;
-        break;
-      }
-
-      const inicioBuscaSufixo = posicaoPrefixo + prefixo.length;
-      const posicaoSufixo     = msgNormalizada.indexOf(sufixo, inicioBuscaSufixo);
-      if (posicaoSufixo === -1) {
-        posicaoAtual = posicaoPrefixo;
-        break;
-      }
-
-      // Encontrou uma mensagem COMPLETA!
-      // A mensagem completa vai do 'startIndex' até o final do 'END_SEQUENCE'.
-      const fimMensagem = posicaoSufixo + sufixo.length;
-      const msgCompleta = msgNormalizada.substring(posicaoPrefixo, fimMensagem);
-      mensagens.push(msgCompleta);
-
-      // Atualiza a posição atual para continuar a busca a partir do fim da mensagem encontrada
-      posicaoAtual = fimMensagem;
-    }
-
-    return mensagens;
+    return this.separarMsgs.obterMensagens(demaisMsg);
   }
 }

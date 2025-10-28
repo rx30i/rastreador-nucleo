@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ServidorTcp = void 0;
 const microservices_1 = require("@nestjs/microservices");
+const separar_mensagens_1 = require("./separar-mensagens");
 const node_string_decoder_1 = require("node:string_decoder");
 const ctx_host_1 = require("../ctx-host");
 const enums_1 = require("../../enums");
@@ -10,11 +11,13 @@ class ServidorTcp extends microservices_1.Server {
     stringDecoder = new node_string_decoder_1.StringDecoder();
     configuracao;
     static conexoesTcp;
+    separarMsgs;
     servidor;
     constructor(configuracao) {
         super();
         ServidorTcp.conexoesTcp = new Map();
         this.configuracao = configuracao;
+        this.separarMsgs = new separar_mensagens_1.SepararMensagens(this.configuracao);
         this.initializeDeserializer(configuracao);
         this.initializeSerializer(configuracao);
     }
@@ -161,52 +164,8 @@ class ServidorTcp extends microservices_1.Server {
             return arrayMensagens;
         }
         const codificacao = this.configuracao.codificacaoMsg;
-        const delimitador = `[${this.configuracao.delimitadorMsg}]`;
         const demaisMsg = mensagem.toString(codificacao);
-        if (demaisMsg.slice(0, delimitador.length) === delimitador &&
-            (demaisMsg.match(new RegExp(delimitador, 'g')) || []).length > 0) {
-            const msgAtualizada = demaisMsg.replace(new RegExp(delimitador, 'g'), `@@@${delimitador}`);
-            const conjutoMsg = msgAtualizada.split('@@@');
-            const novaResposta = [];
-            for (const resposta of conjutoMsg) {
-                if (typeof resposta === 'string' && resposta !== '') {
-                    novaResposta.push(resposta.replace(/(\r\n|\n|\r)/gm, ''));
-                }
-            }
-            return novaResposta;
-        }
-        return [demaisMsg];
-    }
-    separarMsgPeloDelimitador() {
-    }
-    separarMsgPeloPrefixo() {
-    }
-    separarMsgPeloSufixo() {
-    }
-    separarMsgPeloPrefixoSufixo(mensagem) {
-        let posicaoAtual = 0;
-        const mensagens = [];
-        const prefixo = this.configuracao.prefixo ?? '';
-        const sufixo = this.configuracao.sufixo ?? '';
-        const msgNormalizada = mensagem.toLowerCase();
-        while (posicaoAtual < msgNormalizada.length) {
-            const posicaoPrefixo = msgNormalizada.indexOf(prefixo, posicaoAtual);
-            if (posicaoPrefixo === -1) {
-                posicaoAtual = posicaoAtual;
-                break;
-            }
-            const inicioBuscaSufixo = posicaoPrefixo + prefixo.length;
-            const posicaoSufixo = msgNormalizada.indexOf(sufixo, inicioBuscaSufixo);
-            if (posicaoSufixo === -1) {
-                posicaoAtual = posicaoPrefixo;
-                break;
-            }
-            const fimMensagem = posicaoSufixo + sufixo.length;
-            const msgCompleta = msgNormalizada.substring(posicaoPrefixo, fimMensagem);
-            mensagens.push(msgCompleta);
-            posicaoAtual = fimMensagem;
-        }
-        return mensagens;
+        return this.separarMsgs.obterMensagens(demaisMsg);
     }
 }
 exports.ServidorTcp = ServidorTcp;
