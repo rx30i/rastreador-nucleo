@@ -19,8 +19,14 @@ let LoggerService = class LoggerService extends common_1.ConsoleLogger {
         super('LoggerService');
         this.configService = configService;
     }
-    local2(mensagem) {
+    local2(mensagem, prefixo) {
         if (this.configService.get('APP_ENV') !== 'producao') {
+            if (prefixo && Object.prototype.toString.call(mensagem) === '[object Object]') {
+                mensagem = `${prefixo}: ${JSON.stringify(mensagem)}`;
+            }
+            if (prefixo && typeof mensagem === 'string') {
+                mensagem = `${prefixo}: ${mensagem}`;
+            }
             super.log(mensagem, this.context);
         }
     }

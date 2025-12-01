@@ -16,10 +16,17 @@ export class LoggerService extends ConsoleLogger {
    * está no modo desenvolvimento.
    *
    * @param  {unknown} mensagem
+   * @param  {string} prefixo
    * @return {undefined}
   */
-  public local2(mensagem: unknown): undefined {
+  public local2(mensagem: unknown, prefixo?: string): undefined {
     if (this.configService.get<string>('APP_ENV') !== 'producao') {
+      if(prefixo && Object.prototype.toString.call(mensagem) === '[object Object]') {
+        mensagem = `${prefixo}: ${JSON.stringify(mensagem)}`;
+      } if (prefixo && typeof mensagem === 'string') {
+        mensagem = `${prefixo}: ${mensagem}`;
+      }
+
       super.log(mensagem, this.context);
     }
   }

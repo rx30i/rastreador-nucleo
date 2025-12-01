@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 export declare class LoggerService extends ConsoleLogger {
     private readonly configService;
     constructor(configService: ConfigService);
-    local2(mensagem: unknown): undefined;
+    local2(mensagem: unknown, prefixo?: string): undefined;
     capiturarError(erro: unknown): undefined;
     error(message: any, stack?: string, context?: string): void;
     local(prefixo: string, mensagem: string | Record<string, any>): void;
