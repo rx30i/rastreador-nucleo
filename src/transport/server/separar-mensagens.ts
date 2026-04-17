@@ -93,7 +93,6 @@ export class SepararMensagens {
 
     const msgAtualizada = msgNormalizada.replace(new RegExp(sufixo, 'g'), `${sufixo}@@@`);
     const conjutoMsg    = msgAtualizada.split('@@@');
-    console.log(msgAtualizada);
 
     for (const resposta of conjutoMsg) {
       if (typeof resposta === 'string' && resposta.endsWith(sufixo)) {

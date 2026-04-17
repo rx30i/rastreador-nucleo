@@ -1,6 +1,6 @@
 import { IncomingRequest, IncomingEvent } from '@nestjs/microservices';
 import { SepararMensagens } from './separar-mensagens';
-import { IConsumerDeserializer } from 'src/contracts';
+import { IConsumerDeserializer } from '../../contracts';
 import { CodificacaoMsg } from '../../enums';
 import { Logger } from '@nestjs/common';
 
@@ -117,6 +117,13 @@ describe('SepararMensagens', () => {
     it('Recebe uma mensagem valida e retorna um array contendo a mensagem', () => {
       const mensagem = '78780d01086266708570797900007ea40d0a';
       const resposta = ['78780d01086266708570797900007ea40d0a'];
+
+      expect(sufixo.obterMensagens(mensagem)).toEqual(resposta);
+    });
+
+    it('Recebe uma mensagem valida de prefixo 7979 e retorna um array contendo a mensagem', () => {
+      const mensagem = '79790d01086266708570797900007ea40d0a';
+      const resposta = ['79790d01086266708570797900007ea40d0a'];
 
       expect(sufixo.obterMensagens(mensagem)).toEqual(resposta);
     });
