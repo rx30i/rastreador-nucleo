@@ -1,11 +1,11 @@
-import {MensagemConexaoFechadaEntity} from './mensagem-conexao-fechada.entity';
-import {HttpException} from '@nestjs/common';
+import { MensagemConexaoFechadaEntity } from './mensagem-conexao-fechada.entity';
+import { HttpException } from '@nestjs/common';
 
 describe('MensagemConexaoFechadaEntity', () => {
   let entidade01: MensagemConexaoFechadaEntity;
   let entidade02: MensagemConexaoFechadaEntity;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     entidade01 = new MensagemConexaoFechadaEntity('2022-05-20T19:18:15.000Z', '000000009', 'coban303');
     entidade02 = new MensagemConexaoFechadaEntity('', '', '');
   });
@@ -61,8 +61,8 @@ describe('MensagemConexaoFechadaEntity', () => {
   });
 
   describe('Atributo pattern', () => {
-    it('Deve retornar a string conexaoFechada', () => {
-      expect(entidade01.pattern).toEqual('conexaoFechada');
+    it('Deve retornar a string CONEXAO_FECHADA', () => {
+      expect(entidade01.pattern).toEqual('CONEXAO_FECHADA');
     });
   });
 });

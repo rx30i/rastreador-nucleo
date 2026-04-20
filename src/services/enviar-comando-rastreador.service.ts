@@ -1,11 +1,11 @@
-import {ConsumeMessage, MessagePropertyHeaders, Channel} from 'amqplib';
-import {ComandoUsuarioEntity, RespostaComandoEntity} from '../entities';
-import {AmqpConnection} from '@golevelup/nestjs-rabbitmq';
-import {setTimeout} from 'node:timers/promises';
-import {ConfigService} from '@nestjs/config';
-import {ServidorTcp} from '../transport';
-import {ComandoStatus} from '../enums';
-import {ILoger} from '../contracts';
+import { ConsumeMessage, MessagePropertyHeaders, Channel } from 'amqplib';
+import { ComandoUsuarioEntity, RespostaComandoEntity } from '../entities';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { setTimeout } from 'node:timers/promises';
+import { ConfigService } from '@nestjs/config';
+import { ServidorTcp } from '../transport';
+import { ComandoStatus } from '../enums';
+import { ILoger } from '../contracts';
 
 /**
  * Quando o usuário envia um comando ao rastreador, esse comando primeiro vai para uma fila do rabbitMq,
@@ -13,7 +13,7 @@ import {ILoger} from '../contracts';
  * desde que os mesmos estejam conectados.
  */
 export class EnviarComandoRastreadorService {
-  private channel: Channel;
+  private channel?: Channel;
 
   /**
    * Quantidade de vezes que deve se tentar enviar o comando ao rastreador.
@@ -30,7 +30,7 @@ export class EnviarComandoRastreadorService {
   constructor(
     private readonly amqpConnection: AmqpConnection,
     private readonly configService: ConfigService,
-    private readonly logger: ILoger
+    private readonly logger: ILoger,
   ) {}
 
   /**
@@ -52,15 +52,17 @@ export class EnviarComandoRastreadorService {
     }
 
     this.channel = this.amqpConnection.channel;
-    this.channel.prefetch(10);
-    this.channel.on('close', async () => {
+    await this.channel.prefetch(10);
+    this.channel.on('close', () => void (async () => {
       await setTimeout(60000);
-      this.receberMsgRabbitMq(callback);
-    });
+      await this.receberMsgRabbitMq(callback);
+    })());
 
-    this.channel.consume(filaComandos, async (mensagem: ConsumeMessage) => {
-      this.logger.local('COMANDO CRIADO:', mensagem.content.toString('ascii'));
-      callback(mensagem);
+    await this.channel.consume(filaComandos, (mensagem: ConsumeMessage | null) => {
+      if (mensagem != null) {
+        this.logger.local('COMANDO CRIADO:', mensagem.content.toString('ascii'));
+        callback(mensagem);
+      }
     });
   }
 
@@ -77,8 +79,8 @@ export class EnviarComandoRastreadorService {
     const comandoEntity = this.decodificarMsg(mensagem);
     try {
       if (comandoEntity === undefined) {
-        this.channel.ack(mensagem, false);
-        this.channel.publish('amq.direct', 'rastreador.erro', mensagem.content);
+        this.channel?.ack(mensagem, false);
+        this.channel?.publish('amq.direct', 'rastreador.erro', mensagem.content);
         return undefined;
       }
 
@@ -91,10 +93,10 @@ export class EnviarComandoRastreadorService {
 
       this.rejeitarMsg(false, mensagem);
       this.naoPodeSerEnviada(false, mensagem, comandoEntity);
-    } catch (erro) {
+    } catch (erro: unknown) {
       this.rejeitarMsg(false, mensagem);
       this.naoPodeSerEnviada(false, mensagem, comandoEntity);
-      this.logger.capiturarException(erro);
+      this.logger.error(erro);
     }
   }
 
@@ -108,8 +110,8 @@ export class EnviarComandoRastreadorService {
    * @return {void}
    */
   private finalizarMsg(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage, comando: ComandoUsuarioEntity): void {
-    if (msgEnviada === true) {
-      this.channel.ack(rabbitMqMsg, false);
+    if (msgEnviada) {
+      this.channel?.ack(rabbitMqMsg, false);
       this.publicarResposta(ComandoStatus.Enviado, comando);
     }
   }
@@ -126,9 +128,13 @@ export class EnviarComandoRastreadorService {
    * @returs {void}
    */
   private rejeitarMsg(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage): void {
-    const headers = rabbitMqMsg.properties?.headers as MessagePropertyHeaders;
-    if (msgEnviada !== true && (!headers?.['x-death'] || headers['x-death'][0].count < this.tentativasEnvio)) {
-      this.channel.nack(rabbitMqMsg, false, false);
+    const headers = rabbitMqMsg.properties.headers;
+    if (headers === undefined || !('x-death' in headers) || !Array.isArray(headers['x-death'])) {
+      return undefined;
+    }
+
+    if (!msgEnviada && (headers['x-death'][0].count < this.tentativasEnvio)) {
+      this.channel?.nack(rabbitMqMsg, false, false);
     }
   }
 
@@ -143,8 +149,8 @@ export class EnviarComandoRastreadorService {
    * @return {void}
    */
   private naoPodeSerEnviada(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage, comando?: ComandoUsuarioEntity): void {
-    const headers: MessagePropertyHeaders | undefined = rabbitMqMsg.properties?.headers;
-    if (msgEnviada === true || !headers?.['x-death'] || headers['x-death'][0].count < this.tentativasEnvio) {
+    const headers: MessagePropertyHeaders | undefined = rabbitMqMsg.properties.headers;
+    if (msgEnviada || !headers?.['x-death'] || headers['x-death'][0].count < this.tentativasEnvio) {
       return undefined;
     }
 
@@ -152,11 +158,11 @@ export class EnviarComandoRastreadorService {
       this.publicarResposta(ComandoStatus.Erro, comando);
     }
 
-    this.channel.ack(rabbitMqMsg, false);
-    this.channel.publish(
+    this.channel?.ack(rabbitMqMsg, false);
+    this.channel?.publish(
       'amq.direct',
       'rastreador.erro',
-      rabbitMqMsg.content
+      rabbitMqMsg.content,
     );
   }
 
@@ -183,10 +189,10 @@ export class EnviarComandoRastreadorService {
 
     this.logger.local('COMANDO STATUS:', resposta.json());
     resposta.validar();
-    this.channel.publish(
+    this.channel?.publish(
       'amq.direct',
       'rastreador.mensagem',
-      Buffer.from(resposta.json(), 'ascii')
+      Buffer.from(resposta.json(), 'ascii'),
     );
   }
 
@@ -200,7 +206,7 @@ export class EnviarComandoRastreadorService {
    */
   public decodificarMsg(msg: ConsumeMessage): ComandoUsuarioEntity | undefined {
     try {
-      const mensagem = JSON.parse(msg.content.toString('ascii'));
+      const mensagem = JSON.parse(msg.content.toString('ascii')) as Record<string, any>;
       const comandoEntity = new ComandoUsuarioEntity({
         _id             : mensagem._id,
         modeloRastreador: mensagem.modeloRastreador,
@@ -212,7 +218,7 @@ export class EnviarComandoRastreadorService {
 
       return comandoEntity.valido() ? comandoEntity : undefined;
     } catch (erro) {
-      this.logger.capiturarException(erro);
+      this.logger.error(erro);
     }
   }
 }

@@ -5,7 +5,6 @@ export declare class SepararMensagens {
     obterMensagens(mensagem: string): string[];
     private prefixoInformado;
     private sufixoInformado;
-    private delimitadorInformado;
     private separarMsgPeloPrefixo;
     private separarMsgPeloSufixo;
     private separarMsgPeloPrefixoSufixo;

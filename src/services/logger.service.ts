@@ -1,5 +1,5 @@
-import {Injectable as injectable, ConsoleLogger} from '@nestjs/common';
-import {ConfigService} from '@nestjs/config';
+import { Injectable as injectable, ConsoleLogger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/node';
 
 
@@ -21,7 +21,7 @@ export class LoggerService extends ConsoleLogger {
   */
   public local2(mensagem: unknown, prefixo?: string): undefined {
     if (this.configService.get<string>('APP_ENV') !== 'producao') {
-      if(prefixo && Object.prototype.toString.call(mensagem) === '[object Object]') {
+      if (prefixo && Object.prototype.toString.call(mensagem) === '[object Object]') {
         mensagem = `${prefixo}: ${JSON.stringify(mensagem)}`;
       } if (prefixo && typeof mensagem === 'string') {
         mensagem = `${prefixo}: ${mensagem}`;

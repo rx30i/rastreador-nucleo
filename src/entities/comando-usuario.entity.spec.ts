@@ -1,4 +1,4 @@
-import {ComandoUsuarioEntity} from './comando-usuario.entity';
+import { ComandoUsuarioEntity } from './comando-usuario.entity';
 
 describe('ComandoUsuarioEntity', () => {
   let comandoUsuarioEntity01: ComandoUsuarioEntity;

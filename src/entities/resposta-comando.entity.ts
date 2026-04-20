@@ -1,5 +1,5 @@
-import {ComandoStatus} from '../enums/comando-status';
-import {IRespostaComando} from '../contracts';
+import { ComandoStatus } from '../enums/comando-status';
+import { IRespostaComando } from '../contracts';
 
 /**
  * Para todo comando enviado pelo usuário é necessario retornar uma resposta, essa resposta
@@ -65,7 +65,7 @@ export class RespostaComandoEntity {
   }
 
   private _checarInteiro(valor: number): void {
-    if (valor.toString().match(/^\d+$/) === null) {
+    if ((/^\d+$/.exec(valor.toString())) === null) {
       throw new Error('Valor deve ser um numero interio.');
     }
   }

@@ -1,6 +1,6 @@
-import {IMensagemConexaoFechada} from '../contracts/i-mensagem-conexao-fechada';
-import {HttpException, HttpStatus} from '@nestjs/common';
-import {Pattern} from '../enums/pattern';
+import { IMensagemConexaoFechada } from '../contracts/i-mensagem-conexao-fechada';
+import { HttpException, HttpStatus } from '@nestjs/common';
+import { Pattern } from '../enums/pattern';
 
 export class MensagemConexaoFechadaEntity {
   public readonly dataHora: string;
@@ -18,7 +18,7 @@ export class MensagemConexaoFechadaEntity {
   }
 
   public obterObjeto(): IMensagemConexaoFechada {
-    return {...this};
+    return { ...this };
   }
 
   /**
@@ -29,21 +29,21 @@ export class MensagemConexaoFechadaEntity {
     if (!this.dataHora) {
       throw new HttpException(
         `O atributo dataHora não é valido. Valor atual é: '${this.dataHora}'`,
-        HttpStatus.UNPROCESSABLE_ENTITY
+        HttpStatus.UNPROCESSABLE_ENTITY,
       );
     }
 
     if (!this.imei) {
       throw new HttpException(
         `O atributo imei não é valido. Valor atual é: '${this.imei}'`,
-        HttpStatus.UNPROCESSABLE_ENTITY
+        HttpStatus.UNPROCESSABLE_ENTITY,
       );
     }
   }
 
   private obterDataHora(dataHora: string): string {
     if (typeof dataHora === 'string' &&
-    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3})Z$/g.test(dataHora) === true) {
+    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3})Z$/g.test(dataHora)) {
       return dataHora;
     }
 

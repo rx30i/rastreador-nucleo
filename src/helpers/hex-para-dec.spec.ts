@@ -1,4 +1,4 @@
-import {hexParaDec} from './hex-para-dec';
+import { hexParaDec } from './hex-para-dec';
 
 describe('Função hexParaDec()', () => {
   it('Recebe a string "0A" no formato hex e deve retornar o decimal "10" ', () => {

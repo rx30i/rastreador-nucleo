@@ -1,6 +1,6 @@
-import {AmqpConnection} from '@golevelup/nestjs-rabbitmq';
-import {Injectable as injectable} from '@nestjs/common';
-import {IPadraoMsgNestjs} from '../contracts';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { Injectable as injectable } from '@nestjs/common';
+import { IPadraoMsgNestjs } from '../contracts';
 
 @injectable()
 export class SalvarMsgRepository {
@@ -16,7 +16,7 @@ export class SalvarMsgRepository {
     return await this.amqpConnection.publish(
       'amq.direct',
       'rastreador.mensagem',
-      Buffer.from(JSON.stringify(mensagem))
+      Buffer.from(JSON.stringify(mensagem)),
     );
   }
 
@@ -32,7 +32,7 @@ export class SalvarMsgRepository {
     return await this.amqpConnection.publish(
       'amq.direct',
       'rastreador.erro',
-      Buffer.from(mensagem)
+      Buffer.from(mensagem),
     );
   }
 }

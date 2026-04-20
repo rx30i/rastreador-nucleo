@@ -10,7 +10,6 @@ export interface IServidorTCPConfig {
         port: number;
     };
     tratarErro: LoggerService;
-    delimitadorMsg: string;
     prefixo?: string;
     sufixo?: string;
     codificacaoMsg: CodificacaoMsg;

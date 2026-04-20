@@ -65,11 +65,11 @@ class ServidorTcp extends microservices_1.Server {
         const configuracao = this.configuracao.servidor;
         this.servidor.listen(configuracao, callback);
     }
-    on(event, callback) {
-        throw new Error('Method not implemented.');
+    on(evento, callback) {
+        this.servidor?.on(evento, callback);
     }
     unwrap() {
-        throw new Error('Method not implemented.');
+        return this.servidor;
     }
     static obterConexao(imei) {
         const resposta = ServidorTcp.conexoesTcp.get(imei);
@@ -79,14 +79,19 @@ class ServidorTcp extends microservices_1.Server {
         return resposta;
     }
     close() {
-        if (this.servidor !== undefined) {
-            this.servidor.close();
+        if (this.servidor === undefined) {
+            return;
         }
+        for (const socket of ServidorTcp.conexoesTcp.values()) {
+            socket.destroy();
+        }
+        ServidorTcp.conexoesTcp.clear();
+        this.servidor.close();
     }
-    async mensagem(socket) {
-        socket.on('data', async (message) => {
+    mensagem(socket) {
+        socket.on('data', (message) => void (async () => {
             for (const resposta of this.separarMensagens(message)) {
-                const tcpContexto = new ctx_host_1.TcpContext([socket, resposta, ServidorTcp.obterConexao]);
+                const tcpContexto = new ctx_host_1.TcpContext([socket, resposta, (imei) => ServidorTcp.obterConexao(imei)]);
                 const msgFormatada = await this.deserializer.deserialize(resposta);
                 const consumidor = this.getHandlerByPattern(msgFormatada.pattern);
                 if (consumidor === null) {
@@ -94,12 +99,15 @@ class ServidorTcp extends microservices_1.Server {
                     this.configuracao.tratarErro.error(`Class ServidorTcp ${erro} ${resposta}`);
                     continue;
                 }
-                consumidor?.isEventHandler
-                    ? this.eventPattern(tcpContexto, msgFormatada)
-                    : this.messagePattern(tcpContexto, msgFormatada);
                 this.salvarConexao(socket, resposta);
+                if (consumidor.isEventHandler === true) {
+                    await this.eventPattern(tcpContexto, msgFormatada);
+                }
+                else {
+                    await this.messagePattern(tcpContexto, msgFormatada);
+                }
             }
-        });
+        })());
     }
     async messagePattern(tcpContexto, msgFormatada) {
         const mensagem = msgFormatada;
@@ -108,36 +116,40 @@ class ServidorTcp extends microservices_1.Server {
             return;
         }
         const response$ = this.transformToObservable(await consumidor(mensagem.data, tcpContexto));
-        response$ && this.send(response$, (data) => {
+        this.send(response$, (data) => {
             Object.assign(data, { id: mensagem.id });
             const outgoingResponse = this.serializer.serialize(data);
             tcpContexto.getSocketRef()?.write(Buffer.from(this.formatarResposta(outgoingResponse)));
         });
     }
     async eventPattern(tcpContexto, evento) {
-        this.handleEvent(evento.pattern, evento, tcpContexto);
+        await this.handleEvent(evento.pattern, evento, tcpContexto);
     }
     timeOut(socket) {
         socket.setTimeout(600000);
         socket.on('timeout', () => {
-            this.clienteDesconectou(socket);
+            this.clienteDesconectou(socket).catch((erro) => {
+                this.configuracao.tratarErro.error(erro);
+            });
         });
     }
     clienteEncerrouConexao(socket) {
         socket.on('end', () => {
-            this.clienteDesconectou(socket);
+            this.clienteDesconectou(socket).catch((erro) => {
+                this.configuracao.tratarErro.error(erro);
+            });
         });
     }
-    clienteDesconectou(socket) {
-        const imei = socket?.imei || '';
+    async clienteDesconectou(socket) {
+        const imei = socket.imei ?? '';
         const socketSalvo = ServidorTcp.conexoesTcp.get(imei);
-        if ((socketSalvo?.id || null) === socket?.id) {
+        if ((socketSalvo?.id ?? null) === socket.id) {
             ServidorTcp.conexoesTcp.delete(imei);
             const tempo = (new Date()).toISOString();
             const evento = { pattern: enums_1.Pattern.CONEXAO_FECHADA, data: { imei: imei, dataHora: tempo } };
             const consumidorEvento = this.getHandlerByPattern(evento.pattern);
             if (consumidorEvento?.isEventHandler) {
-                this.handleEvent(evento.pattern, evento, {});
+                await this.handleEvent(evento.pattern, evento, {});
             }
         }
         socket.end();
@@ -146,10 +158,12 @@ class ServidorTcp extends microservices_1.Server {
     conexaoErro(socket) {
         socket.on('error', (error) => {
             if (error.message === 'read ECONNRESET') {
-                this.clienteDesconectou(socket);
+                this.clienteDesconectou(socket).catch((erro) => {
+                    this.configuracao.tratarErro.error(erro);
+                });
             }
             if (error.message !== 'read ECONNRESET') {
-                this.configuracao.tratarErro.error('ServidorTcp', error.stack || error.message);
+                this.configuracao.tratarErro.error('ServidorTcp', error.stack ?? error.message);
             }
         });
     }
@@ -164,10 +178,10 @@ class ServidorTcp extends microservices_1.Server {
     formatarResposta(mensagem) {
         const messageString = JSON.stringify(mensagem);
         const tamanhoMensagm = messageString.length;
-        return `${tamanhoMensagm}#${messageString}`;
+        return `${tamanhoMensagm.toString()}#${messageString}`;
     }
     qtdDispositivosConectados() {
-        this.servidor.getConnections((error, quantidade) => {
+        this.servidor?.getConnections((error, quantidade) => {
             if (error) {
                 this.configuracao.tratarErro.error(error);
                 return;
@@ -176,13 +190,16 @@ class ServidorTcp extends microservices_1.Server {
             const evento = { pattern: enums_1.Pattern.QTD_DISPOSITIVOS_CONECTADOS, data: { qtd: quantidade, dataHora: tempo } };
             const consumidorEvento = this.getHandlerByPattern(evento.pattern);
             if (consumidorEvento?.isEventHandler) {
-                this.handleEvent(evento.pattern, evento, {});
+                this.handleEvent(evento.pattern, evento, {})
+                    .catch((erro) => {
+                    this.configuracao.tratarErro.error(erro);
+                });
             }
         });
     }
     separarMensagens(mensagem) {
         let mensagemString = this.stringDecoder.write(mensagem);
-        const quantidadeMenagem = (mensagemString.match(/\d+#{/g) || []).length;
+        const quantidadeMenagem = (mensagemString.match(/\d+#{/g) ?? []).length;
         if (quantidadeMenagem > 0) {
             const arrayMensagens = [];
             for (let _i = 0; _i < quantidadeMenagem; _i++) {

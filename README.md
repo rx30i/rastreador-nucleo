@@ -1,99 +1,165 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+## Rastreador nucleo
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Contem recursos usados nas integrações dos rastreadores
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-## Description
+## Comandos
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-## Project setup
+### Gerar build
+> npm run start:build
 
-```bash
-$ npm install
+
+### Testes
+> npm run test
+
+
+## Servidor TCP Customizado (ServidorTcp)
+
+A classe `ServidorTcp` é uma implementação customizada de transporte TCP para o NestJS, permitindo criar servidores TCP onde clientes podem se conectar e enviar mensagens. Ela implementa a interface `CustomTransportStrategy` do NestJS.
+
+### Características
+
+- Servidor TCP compatível com o padrão de microserviços do NestJS
+- Suporte a separação de mensagens concatenadas (TCP Receive Segment Coalescing)
+- Gerenciamento de conexões ativas por IMEI
+- Eventos automáticos para conexões fechadas e quantidade de dispositivos conectados
+- Timeout configurável para conexões inativas
+
+### Uso Básico
+
+```typescript
+import { NestFactory } from '@nestjs/core';
+import { MicroserviceOptions } from '@nestjs/microservices';
+import { ServidorTcp } from './transport/server/servidor-tcp';
+import { IServidorTCPConfig } from './contracts';
+
+
+async function bootstrap () {
+  const configService: ConfigService = new ConfigService({isGlobal: true});
+  Sentry.init({dsn: configService.get<string>('SENTRY_DNS')});
+
+  const logger   = new LoggerService(configService);
+  const servidor = configService.get<string>('APP_HOST') ?? '';
+  const porta    = configService.get<number>('APP_PORTA') ?? 0;
+
+  const app = await NestFactory.createMicroservice(AppModule, {
+    strategy: new ServidorTcp({
+      deserializer  : new Deserializer(),
+      codificacaoMsg: CodificacaoMsg.HEX,
+      delimitadorMsg: '',
+      sufixo        : '0d0a',
+      tratarErro    : logger,
+      servidor      : {
+        path: servidor,
+        port: porta,
+      },
+    }),
+  });
+
+  app.listen();
+
+  process.on('unhandledRejection', (erro) => encerrarApp(app, 1, erro));
+  process.on('uncaughtException', (erro) => encerrarApp(app, 1, erro));
+}
+
+bootstrap();
 ```
 
-## Compile and run the project
+### Configuração (IServidorTCPConfig)
 
-```bash
-# development
-$ npm run start
+| Propriedade | Tipo | Obrigatório | Descrição |
+|-------------|------|-------------|-----------|
+| `deserializer` | `IConsumerDeserializer` | Sim | Deserializador para converter mensagens recebidas |
+| `serializer` | `Serializer` | Não | Serializador para formatar respostas |
+| `servidor.path` | `string` | Sim | Endereço IP do servidor |
+| `servidor.port` | `number` | Sim | Porta do servidor |
+| `tratarErro` | `LoggerService` | Sim | Logger para tratamento de erros |
+| `codificacaoMsg` | `CodificacaoMsg` | Sim | Codificação das mensagens (`ascii` ou `hex`) |
+| `prefixo` | `string` | Não | Prefixo para identificar início das mensagens |
+| `sufixo` | `string` | Não | Sufixo para identificar fim das mensagens |
 
-# watch mode
-$ npm run start:dev
+### Métodos Principais
 
-# production mode
-$ npm run start:prod
+#### `listen(callback: () => void)`
+Inicia o servidor TCP e executa o callback quando estiver pronto.
+
+#### `close()`
+Encerra o servidor TCP e destrói todas as conexões ativas.
+
+#### `unwrap<T = Net.Server>(): T`
+Retorna o servidor TCP nativo do Node.js para acesso a funcionalidades específicas.
+
+#### `on(evento: string, callback: Function): void`
+Registra um listener de evento no servidor TCP nativo.
+
+#### `static obterConexao(imei: string): ISocket | null`
+Obtém a conexão (socket) de um cliente pelo seu IMEI.
+
+### Eventos Automáticos
+
+O servidor emite automaticamente os seguintes eventos:
+
+#### `CONEXAO_FECHADA`
+Emitido quando um cliente desconecta.
+
+```typescript
+@EventPattern('CONEXAO_FECHADA')
+handleConexaoFechada(@Payload() data: { imei: string; dataHora: string }) {
+  console.log(`Cliente ${data.imei} desconectou em ${data.dataHora}`);
+}
 ```
 
-## Run tests
+#### `QTD_DISPOSITIVOS_CONECTADOS`
+Emitido quando um novo dispositivo se conecta.
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```typescript
+@EventPattern('QTD_DISPOSITIVOS_CONECTADOS')
+handleQtdDispositivos(@Payload() data: { qtd: number; dataHora: string }) {
+  console.log(`${data.qtd} dispositivos conectados`);
+}
 ```
 
-## Deployment
+### Exemplo de Controller
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+```typescript
+import { Controller } from '@nestjs/common';
+import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import { TcpContext } from './transport/ctx-host';
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+@Controller()
+export class RastreadorController {
+  @MessagePattern('LOGIN')
+  handleLogin(@Payload() data: any, @Ctx() context: TcpContext) {
+    const socket = context.getSocketRef();
+    console.log('Mensagem original:', context.mensagem());
+    
+    return { status: 'ok' };
+  }
 
-```bash
-$ npm install -g mau
-$ mau deploy
+  @EventPattern('LOCALIZACAO')
+  handleLocalizacao(@Payload() data: any) {
+    console.log('Localização recebida:', data);
+  }
+}
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Enviando Comandos para Clientes
 
-## Resources
+```typescript
+import { ServidorTcp } from './transport/server/servidor-tcp';
 
-Check out a few resources that may come in handy when working with NestJS:
+// Obter conexão de um cliente específico
+const socket = ServidorTcp.obterConexao('123456789012345');
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+if (socket) {
+  socket.write(Buffer.from('comando'));
+}
+```
 
-## Support
+### Separação de Mensagens
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+O servidor trata automaticamente mensagens concatenadas pelo protocolo TCP:
 
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+1. **Mensagens no formato NestJS**: `tamanho#mensagem` (ex: `25#{"pattern":"teste"}`)
+2. **Mensagens de rastreadores**: Separadas por `prefixo` e/ou `sufixo` configurados

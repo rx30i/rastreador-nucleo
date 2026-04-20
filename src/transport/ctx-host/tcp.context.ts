@@ -1,6 +1,6 @@
-import {BaseRpcContext} from '@nestjs/microservices/ctx-host/base-rpc.context';
-import {ISocket} from '../../contracts';
-import {Socket} from 'net';
+import { BaseRpcContext } from '@nestjs/microservices/ctx-host/base-rpc.context';
+import { ISocket } from '../../contracts';
+import { Socket } from 'net';
 
 /**
  * Socket   => Conexão do cliente proprietário da mensagem autal.

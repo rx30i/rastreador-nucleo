@@ -20,9 +20,6 @@ class SepararMensagens {
         if (this.sufixoInformado()) {
             return this.separarMsgPeloSufixo(mensagem);
         }
-        if (this.delimitadorInformado()) {
-            return this.separarMsgPeloPrefixo(mensagem);
-        }
         return arrayMensagens;
     }
     prefixoInformado() {
@@ -33,16 +30,13 @@ class SepararMensagens {
         return typeof this.servidorTCPConfig.sufixo === 'string' &&
             this.servidorTCPConfig.sufixo.length > 0;
     }
-    delimitadorInformado() {
-        return typeof this.servidorTCPConfig.delimitadorMsg === 'string' &&
-            this.servidorTCPConfig.delimitadorMsg.length > 0;
-    }
     separarMsgPeloPrefixo(mensagem) {
         const mensagens = [];
         const msgNormalizada = mensagem.toLowerCase();
         const prefixo = this.servidorTCPConfig.prefixo?.toLowerCase();
         if (typeof prefixo !== 'string' || prefixo.length === 0 ||
             !msgNormalizada.startsWith(prefixo)) {
+            mensagens.push(msgNormalizada);
             return mensagens;
         }
         const msgAtualizada = msgNormalizada.replace(new RegExp(prefixo, 'g'), `@@@${prefixo}`);
@@ -59,9 +53,10 @@ class SepararMensagens {
         const msgNormalizada = mensagem.toLowerCase();
         const sufixo = this.servidorTCPConfig.sufixo?.toLowerCase();
         if (typeof sufixo !== 'string' || sufixo.length === 0) {
+            mensagens.push(msgNormalizada);
             return mensagens;
         }
-        if ((msgNormalizada.match(new RegExp(sufixo, 'g')) || []).length == 0) {
+        if ((msgNormalizada.match(new RegExp(sufixo, 'g')) ?? []).length == 0) {
             return mensagens;
         }
         const msgAtualizada = msgNormalizada.replace(new RegExp(sufixo, 'g'), `${sufixo}@@@`);
@@ -92,6 +87,9 @@ class SepararMensagens {
             posicaoAtual = posicaoAtual + 1;
             msgNormalizada = msgNormalizada.substring(fimMensagem);
             mensagens.push(msgCompleta);
+        }
+        if (mensagens.length === 0) {
+            mensagens.push(msgNormalizada);
         }
         return mensagens;
     }

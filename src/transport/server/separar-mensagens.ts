@@ -1,10 +1,20 @@
 import { IServidorTCPConfig } from '../../contracts';
 
-
+/**
+ * O comportamento anterior era: Se a mensagem não começa com o prefixo ou sufixo informado a mesma
+ * é descartada e é retornado um array vazio, porém tive um problema com esse comportamento.
+ *
+ * Nem sempre as mensagens do GT06 começam com 7878, tem mensagens que o prefixo é 7979, ocorreu de
+ * está usando o prefixo 7878 para separar as mensagens quando concatenadas e essa mensagem de
+ * prefixo 7979 era descartada eu não recebia em nenhum controller. O prefixo e sufixo são usados para
+ * separar as mensagens quando recebo várias mensagens concatenadas em uma string mais se não for
+ * identificado o prefixo ou sufixo na mensagem a mesma não é descartada, ela deve ser propagada  para
+ * a aplicação e na aplicação é verificada se é uma mensagem válida ou não.
+ */
 export class SepararMensagens {
   constructor(
     private readonly servidorTCPConfig: IServidorTCPConfig,
-  ){}
+  ) {}
 
   public obterMensagens(mensagem: string): string[] {
     const arrayMensagens: string[] = [];
@@ -18,8 +28,6 @@ export class SepararMensagens {
       return this.separarMsgPeloPrefixo(mensagem);
     } if (this.sufixoInformado()) {
       return this.separarMsgPeloSufixo(mensagem);
-    } if (this.delimitadorInformado()) {
-      return this.separarMsgPeloPrefixo(mensagem);
     }
 
     return arrayMensagens;
@@ -42,24 +50,16 @@ export class SepararMensagens {
   }
 
   /**
-   * @deprecated
-   * @return {boolean}
-  */
-  private delimitadorInformado(): boolean {
-    return typeof this.servidorTCPConfig.delimitadorMsg === 'string' &&
-    this.servidorTCPConfig.delimitadorMsg.length > 0;
-  }
-
-  /**
    * @param  {string} mensagem
    * @return {string[]}
   */
   private separarMsgPeloPrefixo(mensagem: string): string[] {
-    const mensagens      = <Array<string>>[];
+    const mensagens      = [] as string[];
     const msgNormalizada = mensagem.toLowerCase();
     const prefixo        = this.servidorTCPConfig.prefixo?.toLowerCase();
     if (typeof prefixo !== 'string' || prefixo.length === 0 ||
     !msgNormalizada.startsWith(prefixo)) {
+      mensagens.push(msgNormalizada);
       return mensagens;
     }
 
@@ -80,14 +80,15 @@ export class SepararMensagens {
    * @return {string[]}
   */
   private separarMsgPeloSufixo(mensagem: string): string[] {
-    const mensagens      = <Array<string>>[];
+    const mensagens      = [] as string[];
     const msgNormalizada = mensagem.toLowerCase();
     const sufixo         = this.servidorTCPConfig.sufixo?.toLowerCase();
     if (typeof sufixo !== 'string' || sufixo.length === 0) {
+      mensagens.push(msgNormalizada);
       return mensagens;
     }
 
-    if((msgNormalizada.match(new RegExp(sufixo, 'g')) || []).length == 0) {
+    if ((msgNormalizada.match(new RegExp(sufixo, 'g')) ?? []).length == 0) {
       return mensagens;
     }
 
@@ -108,13 +109,13 @@ export class SepararMensagens {
    * @return {string[]}
   */
   private separarMsgPeloPrefixoSufixo(mensagem: string): string[] {
-    let posicaoAtual: number  = 0;
+    let posicaoAtual  = 0;
     const mensagens: string[] = [];
     const prefixo = this.servidorTCPConfig.prefixo?.toLowerCase() ?? '';
     const sufixo  = this.servidorTCPConfig.sufixo?.toLowerCase() ?? '';
 
     let msgNormalizada = mensagem.toLowerCase();
-    while(posicaoAtual < msgNormalizada.length) {
+    while (posicaoAtual < msgNormalizada.length) {
       if (!msgNormalizada.startsWith(prefixo)) {
         break;
       }
@@ -133,6 +134,10 @@ export class SepararMensagens {
       posicaoAtual   = posicaoAtual + 1;
       msgNormalizada = msgNormalizada.substring(fimMensagem);
       mensagens.push(msgCompleta);
+    }
+
+    if (mensagens.length === 0) {
+      mensagens.push(msgNormalizada);
     }
 
     return mensagens;

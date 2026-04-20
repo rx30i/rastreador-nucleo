@@ -1,4 +1,4 @@
-import {hexParaDec} from './hex-para-dec';
+import { hexParaDec } from './hex-para-dec';
 
 /**
  * Converter string hexadecimal para binário. Cada digito em hexadecimal corresponde

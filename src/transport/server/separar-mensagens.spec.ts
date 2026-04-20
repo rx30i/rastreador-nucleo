@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import { IncomingRequest, IncomingEvent } from '@nestjs/microservices';
 import { SepararMensagens } from './separar-mensagens';
 import { IConsumerDeserializer } from '../../contracts';
@@ -25,7 +26,6 @@ describe('SepararMensagens', () => {
       codificacaoMsg: CodificacaoMsg.HEX,
       deserializer  : new Deserializer(),
       tratarErro    : new Logger(),
-      delimitadorMsg: '',
       prefixo       : '7878',
       sufixo        : '0d0a',
       servidor      : {
@@ -38,7 +38,6 @@ describe('SepararMensagens', () => {
       codificacaoMsg: CodificacaoMsg.HEX,
       deserializer  : new Deserializer(),
       tratarErro    : new Logger(),
-      delimitadorMsg: '',
       prefixo       : '7878',
       servidor      : {
         path: '127.0.0.1',
@@ -46,11 +45,10 @@ describe('SepararMensagens', () => {
       },
     });
 
-     sufixo = new SepararMensagens({
+    sufixo = new SepararMensagens({
       codificacaoMsg: CodificacaoMsg.HEX,
       deserializer  : new Deserializer(),
       tratarErro    : new Logger(),
-      delimitadorMsg: '',
       sufixo        : '0d0a',
       servidor      : {
         path: '127.0.0.1',
@@ -67,19 +65,19 @@ describe('SepararMensagens', () => {
       expect(prefixoSufixo.obterMensagens(mensagem)).toEqual(resposta);
     });
 
-    it('Recebe uma mensagem com prefixo invalido e deve retorna um array vazío', () => {
+    it('Recebe uma mensagem com prefixo invalido e deve retorna um array contento a mensagem recebida', () => {
       const mensagem = '78770d01086266708570787800007ea40d0a';
-      expect(prefixoSufixo.obterMensagens(mensagem)).toEqual([]);
+      expect(prefixoSufixo.obterMensagens(mensagem)).toEqual(['78770d01086266708570787800007ea40d0a']);
     });
 
-    it('Recebe uma mensagem com sufixo invalido e deve retorna um array vazío', () => {
+    it('Recebe uma mensagem com sufixo invalido e deve retorna um array com a mensagem recebida', () => {
       const mensagem = '78780d01086266708570787800007ea40d0b';
-      expect(prefixoSufixo.obterMensagens(mensagem)).toEqual([]);
+      expect(prefixoSufixo.obterMensagens(mensagem)).toEqual(['78780d01086266708570787800007ea40d0b']);
     });
 
-     it('Recebe 2 mensagens validas e deve retorna um array contendo 2 mensagens', () => {
+    it('Recebe 2 mensagens validas e deve retorna um array contendo 2 mensagens', () => {
       const mensagem = '78780d01086266708570787800007ea40d0a78780d01086266708570787800007ea40d0a';
-      const resposta = ['78780d01086266708570787800007ea40d0a','78780d01086266708570787800007ea40d0a'];
+      const resposta = ['78780d01086266708570787800007ea40d0a', '78780d01086266708570787800007ea40d0a'];
 
       expect(prefixoSufixo.obterMensagens(mensagem)).toEqual(resposta);
     });
@@ -100,14 +98,14 @@ describe('SepararMensagens', () => {
       expect(prefixo.obterMensagens(mensagem)).toEqual(resposta);
     });
 
-    it('Recebe uma mensagem com prefixo invalido e deve retorna um array vazío', () => {
+    it('Recebe uma mensagem com prefixo invalido e deve retorna um array contendo a mensagem recebida', () => {
       const mensagem = '78770d01086266708570787800007ea40d0a';
-      expect(prefixo.obterMensagens(mensagem)).toEqual([]);
+      expect(prefixo.obterMensagens(mensagem)).toEqual(['78770d01086266708570787800007ea40d0a']);
     });
 
     it('Recebe 2 mensagens validas e deve retorna um array contendo 2 mensagens', () => {
       const mensagem = '78780d01086266708570797900007ea40d0a78780d01086266708570797900007ea40d0a';
-      const resposta = ['78780d01086266708570797900007ea40d0a','78780d01086266708570797900007ea40d0a'];
+      const resposta = ['78780d01086266708570797900007ea40d0a', '78780d01086266708570797900007ea40d0a'];
 
       expect(prefixo.obterMensagens(mensagem)).toEqual(resposta);
     });
@@ -135,7 +133,7 @@ describe('SepararMensagens', () => {
 
     it('Recebe 2 mensagens validas e deve retorna um array contendo 2 mensagens', () => {
       const mensagem = '78780d01086266708570797900007ea40d0a78780d01086266708570797900007ea40d0a';
-      const resposta = ['78780d01086266708570797900007ea40d0a','78780d01086266708570797900007ea40d0a'];
+      const resposta = ['78780d01086266708570797900007ea40d0a', '78780d01086266708570797900007ea40d0a'];
 
       expect(sufixo.obterMensagens(mensagem)).toEqual(resposta);
     });

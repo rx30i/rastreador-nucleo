@@ -48,7 +48,7 @@ class RespostaComandoEntity {
         }
     }
     _checarInteiro(valor) {
-        if (valor.toString().match(/^\d+$/) === null) {
+        if ((/^\d+$/.exec(valor.toString())) === null) {
             throw new Error('Valor deve ser um numero interio.');
         }
     }

@@ -10,7 +10,7 @@ export class DeclararFilasRabbitMqService {
 
   public async declararExchange(channel: amqplib.Channel): Promise<void> {
     await channel.assertExchange(
-      'amq.direct', 'direct', {durable: true}
+      'amq.direct', 'direct', { durable: true },
     );
   }
 
@@ -36,7 +36,7 @@ export class DeclararFilasRabbitMqService {
 
   private queueRastreadorErro(channel: amqplib.Channel): Promise<AssertQueue> {
     return channel.assertQueue(
-      'rastreador.erro', {durable: true}
+      'rastreador.erro', { durable: true },
     );
   }
 
@@ -48,7 +48,7 @@ export class DeclararFilasRabbitMqService {
           'x-dead-letter-exchange'   : 'amq.direct',
           'x-dead-letter-routing-key': 'rastreador.mensagem.pausa',
         },
-      }
+      },
     );
   }
 
@@ -61,7 +61,7 @@ export class DeclararFilasRabbitMqService {
           'x-dead-letter-routing-key': 'rastreador.mensagem',
           'x-message-ttl'            : 60000,
         },
-      }
+      },
     );
   }
 
@@ -73,7 +73,7 @@ export class DeclararFilasRabbitMqService {
           'x-dead-letter-exchange'   : 'amq.direct',
           'x-dead-letter-routing-key': this.rabbitMqFilaCmdPausa,
         },
-      }
+      },
     );
   }
 
@@ -86,7 +86,7 @@ export class DeclararFilasRabbitMqService {
           'x-dead-letter-routing-key': this.rabbitMqFilaCmd,
           'x-message-ttl'            : 5000,
         },
-      }
+      },
     );
   }
 }
