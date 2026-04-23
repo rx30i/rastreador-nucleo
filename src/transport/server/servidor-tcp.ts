@@ -112,8 +112,6 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    */
   private mensagem(socket: ISocket): void {
     socket.on('data', (message: Buffer) => void (async () => {
-      console.log('SERVIDOR HEX: ', message.toString('hex'));
-      console.log('SERVIDOR ASCII: ', message.toString());
       for (const resposta of this.separarMensagens(message)) {
         const tcpContexto  = new TcpContext([socket, resposta, (imei: string) => ServidorTcp.obterConexao(imei)]);
         const msgFormatada = await this.deserializer.deserialize(resposta);
