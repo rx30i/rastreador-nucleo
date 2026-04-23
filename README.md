@@ -14,9 +14,10 @@ Contem recursos usados nas integrações dos rastreadores
 > npm run test
 
 
-## Servidor TCP Customizado (ServidorTcp)
+## Servidor TCP customizado (ServidorTcp)
 
 A classe `ServidorTcp` é uma implementação customizada de transporte TCP para o NestJS, permitindo criar servidores TCP onde clientes podem se conectar e enviar mensagens. Ela implementa a interface `CustomTransportStrategy` do NestJS.
+
 
 ### Características
 
@@ -25,6 +26,7 @@ A classe `ServidorTcp` é uma implementação customizada de transporte TCP para
 - Gerenciamento de conexões ativas por IMEI
 - Eventos automáticos para conexões fechadas e quantidade de dispositivos conectados
 - Timeout configurável para conexões inativas
+
 
 ### Uso Básico
 
@@ -104,42 +106,93 @@ O servidor emite automaticamente os seguintes eventos:
 Emitido quando um cliente desconecta.
 
 ```typescript
-@EventPattern('CONEXAO_FECHADA')
-handleConexaoFechada(@Payload() data: { imei: string; dataHora: string }) {
-  console.log(`Cliente ${data.imei} desconectou em ${data.dataHora}`);
+import { SalvarMsgConexaoRastreadorEnceradaService } from '../services';
+import { EventPattern, Payload } from '@nestjs/microservices';
+import { Pattern } from 'rastreador-nucleo/dist/src';
+import { Controller } from '@nestjs/common';
+
+@Controller()
+export class ReceberMsgConexaoRastreadorEnceradaController {
+  constructor (
+    private readonly conexaoRastreadorEncerada: SalvarMsgConexaoRastreadorEnceradaService
+  ) {}
+
+  //Sempre que o rastreador for desconectado do servidor TCP, esse controller será informado.
+  @EventPattern(Pattern.CONEXAO_FECHADA)
+  public async receber (@Payload() mensagem: Record<string, string>): Promise<void> {
+    await this.conexaoRastreadorEncerada.salvar(mensagem);
+  }
 }
 ```
+
+
+#### `DESCONHECIDA`
+Emitido quando não for definido um controller para lidar com o tipo da mensagem recebida.
+
+```typescript
+import { EventPattern, Payload } from '@nestjs/microservices';
+import { SalvarMsgDesconhecidaService } from '../services';
+import { Pattern } from 'rastreador-nucleo/dist/src';
+import { Controller } from '@nestjs/common';
+
+@Controller()
+export class ReceberMsgDesconhecidaController {
+  constructor (
+    private readonly salvarMsgDesconhecida: SalvarMsgDesconhecidaService,
+  ) {}
+
+  @EventPattern(Pattern.DESCONHECIDA)
+  public async receber (@Payload() mensagem: string): Promise<void> {
+    await this.salvarMsgDesconhecida.salvar(mensagem);
+  }
+}
+
+```
+
 
 #### `QTD_DISPOSITIVOS_CONECTADOS`
 Emitido quando um novo dispositivo se conecta.
 
 ```typescript
-@EventPattern('QTD_DISPOSITIVOS_CONECTADOS')
-handleQtdDispositivos(@Payload() data: { qtd: number; dataHora: string }) {
-  console.log(`${data.qtd} dispositivos conectados`);
+import { EventPattern, Payload } from '@nestjs/microservices';
+import { Pattern } from 'rastreador-nucleo/dist/src';
+import { LoggerService } from '../../nucleo';
+import { Controller } from '@nestjs/common';
+
+@Controller()
+export class ReceberMsgQtdDispositivosConectadosController {
+  constructor (
+    private readonly loggerService: LoggerService,
+  ) {}
+
+  @EventPattern(Pattern.QTD_DISPOSITIVOS_CONECTADOS)
+  public async receber (@Payload() mensagem: string): Promise<void> {
+    this.loggerService.local('INTEGRAÇÃO', mensagem);
+  }
 }
 ```
 
-### Exemplo de Controller
+
+### Exemplo de Controller para lidar com a menssagem `LOGIN`
 
 ```typescript
+import { ResponderMsgLoginService, SalvarMsgLoginService } from '../services';
+import { Ctx, EventPattern, Payload } from '@nestjs/microservices';
+import { TcpContext, Pattern } from 'rastreador-nucleo/dist/src';
 import { Controller } from '@nestjs/common';
-import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
-import { TcpContext } from './transport/ctx-host';
 
 @Controller()
-export class RastreadorController {
-  @MessagePattern('LOGIN')
-  handleLogin(@Payload() data: any, @Ctx() context: TcpContext) {
-    const socket = context.getSocketRef();
-    console.log('Mensagem original:', context.mensagem());
-    
-    return { status: 'ok' };
-  }
+export class ReceberMsgLoginController {
 
-  @EventPattern('LOCALIZACAO')
-  handleLocalizacao(@Payload() data: any) {
-    console.log('Localização recebida:', data);
+  constructor (
+    private readonly responderMsgLogin: ResponderMsgLoginService,
+    private readonly salvarMsgLogin: SalvarMsgLoginService,
+  ) {}
+
+  @EventPattern(Pattern.LOGIN)
+  public async receber (@Payload() mensagem: string, @Ctx() ctx: TcpContext): Promise<void> {
+    this.responderMsgLogin.responder(mensagem, ctx);
+    await this.salvarMsgLogin.salvar(mensagem);
   }
 }
 ```
