@@ -1,5 +1,14 @@
 import * as amqplib from 'amqplib';
 
+import {
+  RABBITMQ_EXCHANGE_DIRETO,
+  RABBITMQ_FILA_RASTREADOR_ERRO,
+  RABBITMQ_FILA_RASTREADOR_MENSAGEM,
+  RABBITMQ_FILA_RASTREADOR_MENSAGEM_PAUSA,
+  RABBITMQ_TTL_COMANDO_PAUSA,
+  RABBITMQ_TTL_MENSAGEM_PAUSA,
+} from '../enums';
+
 type AssertQueue = amqplib.Replies.AssertQueue;
 
 export class DeclararFilasRabbitMqService {
@@ -8,83 +17,105 @@ export class DeclararFilasRabbitMqService {
     private readonly rabbitMqFilaCmd: string,
   ) {}
 
-  public async declararExchange(channel: amqplib.Channel): Promise<void> {
-    await channel.assertExchange(
-      'amq.direct', 'direct', { durable: true },
+  public async declararExchange(canal: amqplib.Channel): Promise<void> {
+    await canal.assertExchange(
+      RABBITMQ_EXCHANGE_DIRETO, 'direct', { durable: true },
     );
   }
 
-  public async declararQueue(channel: amqplib.Channel): Promise<void> {
+  public async declararFila(canal: amqplib.Channel): Promise<void> {
     await Promise.all([
-      this.queueRastreadorErro(channel),
-      this.queueRastreadorMensagem(channel),
-      this.queueRastreadorMensagemPausa(channel),
-      this.queueRastreadorCmd(channel),
-      this.queueRastreadorCmdPausa(channel),
+      this.criarFilaRastreadorErro(canal),
+      this.criarFilaRastreadorMensagem(canal),
+      this.criarFilaRastreadorMensagemPausa(canal),
+      this.criarFilaRastreadorCmd(canal),
+      this.criarFilaRastreadorCmdPausa(canal),
     ]);
   }
 
-  public async bind(channel: amqplib.Channel): Promise<void> {
-    await Promise.all([
-      channel.bindQueue('rastreador.mensagem.pausa', 'amq.direct', 'rastreador.mensagem.pausa'),
-      channel.bindQueue('rastreador.mensagem', 'amq.direct', 'rastreador.mensagem'),
-      channel.bindQueue('rastreador.erro', 'amq.direct', 'rastreador.erro'),
-      channel.bindQueue(this.rabbitMqFilaCmdPausa, 'amq.direct', this.rabbitMqFilaCmdPausa),
-      channel.bindQueue(this.rabbitMqFilaCmd, 'amq.direct', this.rabbitMqFilaCmd),
-    ]);
+  public async vincular(canal: amqplib.Channel): Promise<void> {
+    const vinculacoes: Promise<amqplib.Replies.Empty>[] = [
+      canal.bindQueue(
+        RABBITMQ_FILA_RASTREADOR_MENSAGEM_PAUSA,
+        RABBITMQ_EXCHANGE_DIRETO,
+        RABBITMQ_FILA_RASTREADOR_MENSAGEM_PAUSA,
+      ),
+      canal.bindQueue(
+        RABBITMQ_FILA_RASTREADOR_MENSAGEM,
+        RABBITMQ_EXCHANGE_DIRETO,
+        RABBITMQ_FILA_RASTREADOR_MENSAGEM,
+      ),
+      canal.bindQueue(
+        RABBITMQ_FILA_RASTREADOR_ERRO,
+        RABBITMQ_EXCHANGE_DIRETO,
+        RABBITMQ_FILA_RASTREADOR_ERRO,
+      ),
+      canal.bindQueue(
+        this.rabbitMqFilaCmdPausa,
+        RABBITMQ_EXCHANGE_DIRETO,
+        this.rabbitMqFilaCmdPausa,
+      ),
+      canal.bindQueue(
+        this.rabbitMqFilaCmd,
+        RABBITMQ_EXCHANGE_DIRETO,
+        this.rabbitMqFilaCmd,
+      ),
+    ];
+
+    await Promise.all(vinculacoes);
   }
 
-  private queueRastreadorErro(channel: amqplib.Channel): Promise<AssertQueue> {
-    return channel.assertQueue(
-      'rastreador.erro', { durable: true },
+  private criarFilaRastreadorErro(canal: amqplib.Channel): Promise<AssertQueue> {
+    return canal.assertQueue(
+      RABBITMQ_FILA_RASTREADOR_ERRO, { durable: true },
     );
   }
 
-  private queueRastreadorMensagem(channel: amqplib.Channel): Promise<AssertQueue> {
-    return channel.assertQueue(
-      'rastreador.mensagem', {
+  private criarFilaRastreadorMensagem(canal: amqplib.Channel): Promise<AssertQueue> {
+    return canal.assertQueue(
+      RABBITMQ_FILA_RASTREADOR_MENSAGEM, {
         durable  : true,
         arguments: {
-          'x-dead-letter-exchange'   : 'amq.direct',
-          'x-dead-letter-routing-key': 'rastreador.mensagem.pausa',
+          'x-dead-letter-exchange'   : RABBITMQ_EXCHANGE_DIRETO,
+          'x-dead-letter-routing-key': RABBITMQ_FILA_RASTREADOR_MENSAGEM_PAUSA,
         },
       },
     );
   }
 
-  private queueRastreadorMensagemPausa(channel: amqplib.Channel): Promise<AssertQueue> {
-    return channel.assertQueue(
-      'rastreador.mensagem.pausa', {
+  private criarFilaRastreadorMensagemPausa(canal: amqplib.Channel): Promise<AssertQueue> {
+    return canal.assertQueue(
+      RABBITMQ_FILA_RASTREADOR_MENSAGEM_PAUSA, {
         durable  : true,
         arguments: {
-          'x-dead-letter-exchange'   : 'amq.direct',
-          'x-dead-letter-routing-key': 'rastreador.mensagem',
-          'x-message-ttl'            : 60000,
+          'x-dead-letter-exchange'   : RABBITMQ_EXCHANGE_DIRETO,
+          'x-dead-letter-routing-key': RABBITMQ_FILA_RASTREADOR_MENSAGEM,
+          'x-message-ttl'            : RABBITMQ_TTL_MENSAGEM_PAUSA,
         },
       },
     );
   }
 
-  private queueRastreadorCmd(channel: amqplib.Channel): Promise<AssertQueue> {
-    return channel.assertQueue(
+  private criarFilaRastreadorCmd(canal: amqplib.Channel): Promise<AssertQueue> {
+    return canal.assertQueue(
       this.rabbitMqFilaCmd, {
         durable  : true,
         arguments: {
-          'x-dead-letter-exchange'   : 'amq.direct',
+          'x-dead-letter-exchange'   : RABBITMQ_EXCHANGE_DIRETO,
           'x-dead-letter-routing-key': this.rabbitMqFilaCmdPausa,
         },
       },
     );
   }
 
-  private queueRastreadorCmdPausa(channel: amqplib.Channel): Promise<AssertQueue> {
-    return channel.assertQueue(
+  private criarFilaRastreadorCmdPausa(canal: amqplib.Channel): Promise<AssertQueue> {
+    return canal.assertQueue(
       this.rabbitMqFilaCmdPausa, {
         durable  : true,
         arguments: {
-          'x-dead-letter-exchange'   : 'amq.direct',
+          'x-dead-letter-exchange'   : RABBITMQ_EXCHANGE_DIRETO,
           'x-dead-letter-routing-key': this.rabbitMqFilaCmd,
-          'x-message-ttl'            : 5000,
+          'x-message-ttl'            : RABBITMQ_TTL_COMANDO_PAUSA,
         },
       },
     );

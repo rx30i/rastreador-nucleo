@@ -35,13 +35,20 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.encerrarApp = encerrarApp;
 const Sentry = __importStar(require("@sentry/node"));
-function encerrarApp(app, codigo, erro) {
+async function encerrarApp(app, codigo, erro) {
     if (erro instanceof Error) {
         Sentry.captureException(erro);
     }
-    app.close();
-    setTimeout(() => {
+    try {
+        await app.close();
+    }
+    catch (erroAoFechar) {
+        if (erroAoFechar instanceof Error) {
+            Sentry.captureException(erroAoFechar);
+        }
+    }
+    finally {
         process.exit(codigo);
-    }, 1000);
+    }
 }
 //# sourceMappingURL=encerrar-app.js.map

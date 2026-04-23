@@ -1,13 +1,18 @@
 import { INestMicroservice } from '@nestjs/common';
 import * as Sentry from '@sentry/node';
 
-export function encerrarApp(app: INestMicroservice, codigo: number, erro: Error | any): void {
+export async function encerrarApp(app: INestMicroservice, codigo: number, erro: unknown): Promise<void> {
   if (erro instanceof Error) {
     Sentry.captureException(erro);
   }
 
-  app.close();
-  setTimeout(() => {
+  try {
+    await app.close();
+  } catch (erroAoFechar) {
+    if (erroAoFechar instanceof Error) {
+      Sentry.captureException(erroAoFechar);
+    }
+  } finally {
     process.exit(codigo);
-  }, 1000);
+  }
 }

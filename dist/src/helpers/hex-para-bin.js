@@ -7,13 +7,10 @@ function hexParaBin(mensagem) {
         return undefined;
     }
     let resposta = '';
-    const arrayDados = mensagem.split('');
-    for (let cont = 0; cont < arrayDados.length; cont++) {
-        if (arrayDados[cont] !== undefined) {
-            const valorDecimal = (0, hex_para_dec_1.hexParaDec)(arrayDados[cont]);
-            if (valorDecimal !== undefined) {
-                resposta += valorDecimal.toString(2).padStart(4, '0');
-            }
+    for (const caractere of mensagem) {
+        const valorDecimal = (0, hex_para_dec_1.hexParaDec)(caractere);
+        if (valorDecimal !== undefined) {
+            resposta += valorDecimal.toString(2).padStart(4, '0');
         }
     }
     return resposta;

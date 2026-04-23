@@ -10,6 +10,7 @@ export declare class EnviarComandoRastreadorService {
     private channel?;
     private tentativasEnvio;
     constructor(amqpConnection: AmqpConnection, configService: ConfigService, logger: ILoger);
+    private obterCanal;
     receberMsgRabbitMq(callback: (mensagem: ConsumeMessage) => void): Promise<void>;
     enviarComando(mensagem: ConsumeMessage, comando: Buffer): undefined;
     private finalizarMsg;

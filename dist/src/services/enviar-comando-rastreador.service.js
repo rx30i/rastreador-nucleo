@@ -16,6 +16,12 @@ class EnviarComandoRastreadorService {
         this.configService = configService;
         this.logger = logger;
     }
+    obterCanal() {
+        if (!this.channel) {
+            throw new Error('Canal RabbitMQ não está disponível. Verifique a conexão.');
+        }
+        return this.channel;
+    }
     async receberMsgRabbitMq(callback) {
         const filaComandos = this.configService.get('RABBITMQ_FILA_COMANDO');
         if (!filaComandos) {
@@ -39,8 +45,9 @@ class EnviarComandoRastreadorService {
         const comandoEntity = this.decodificarMsg(mensagem);
         try {
             if (comandoEntity === undefined) {
-                this.channel?.ack(mensagem, false);
-                this.channel?.publish('amq.direct', 'rastreador.erro', mensagem.content);
+                const canal = this.obterCanal();
+                canal.ack(mensagem, false);
+                canal.publish('amq.direct', 'rastreador.erro', mensagem.content);
                 return undefined;
             }
             const socket = transport_1.ServidorTcp.obterConexao(comandoEntity.imei);
@@ -60,7 +67,7 @@ class EnviarComandoRastreadorService {
     }
     finalizarMsg(msgEnviada, rabbitMqMsg, comando) {
         if (msgEnviada) {
-            this.channel?.ack(rabbitMqMsg, false);
+            this.obterCanal().ack(rabbitMqMsg, false);
             this.publicarResposta(enums_1.ComandoStatus.Enviado, comando);
         }
     }
@@ -70,7 +77,7 @@ class EnviarComandoRastreadorService {
             return undefined;
         }
         if (!msgEnviada && (headers['x-death'][0].count < this.tentativasEnvio)) {
-            this.channel?.nack(rabbitMqMsg, false, false);
+            this.obterCanal().nack(rabbitMqMsg, false, false);
         }
     }
     naoPodeSerEnviada(msgEnviada, rabbitMqMsg, comando) {
@@ -81,8 +88,9 @@ class EnviarComandoRastreadorService {
         if (comando instanceof entities_1.ComandoUsuarioEntity) {
             this.publicarResposta(enums_1.ComandoStatus.Erro, comando);
         }
-        this.channel?.ack(rabbitMqMsg, false);
-        this.channel?.publish('amq.direct', 'rastreador.erro', rabbitMqMsg.content);
+        const canal = this.obterCanal();
+        canal.ack(rabbitMqMsg, false);
+        canal.publish('amq.direct', 'rastreador.erro', rabbitMqMsg.content);
     }
     publicarResposta(statusResposta, comando) {
         const dataHora = new Date().toISOString();
@@ -97,7 +105,7 @@ class EnviarComandoRastreadorService {
         });
         this.logger.local('COMANDO STATUS:', resposta.json());
         resposta.validar();
-        this.channel?.publish('amq.direct', 'rastreador.mensagem', Buffer.from(resposta.json(), 'ascii'));
+        this.obterCanal().publish('amq.direct', 'rastreador.mensagem', Buffer.from(resposta.json(), 'ascii'));
     }
     decodificarMsg(msg) {
         try {
@@ -114,6 +122,7 @@ class EnviarComandoRastreadorService {
         }
         catch (erro) {
             this.logger.error(erro);
+            return undefined;
         }
     }
 }

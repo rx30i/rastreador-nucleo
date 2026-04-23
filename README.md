@@ -18,3 +18,9 @@ Contem recursos usados nas integrações dos rastreadores
 [Servidor TCP](/docs/servidor-tcp.md)
 
 [Envio de comandos](/docs/enviar-comandos.md)
+
+[Declarar filas](/docs/declarar-filas-rabbitmq.md)
+
+[Salvar mensagem repository](/docs/salvar-msg.repository.md)
+
+[Utilitários](/docs/utilitarios.md)

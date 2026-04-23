@@ -78,33 +78,6 @@ let LoggerService = class LoggerService extends common_1.ConsoleLogger {
         }
         Sentry.captureException(erro);
     }
-    error(message, stack, context) {
-        const erros = [message, stack, context];
-        const resposta = erros.filter((valor) => {
-            return valor ? true : false;
-        });
-        if (this.configService.get('APP_ENV') !== 'producao') {
-            super.error(resposta.toString());
-            return;
-        }
-        Sentry.captureMessage(resposta.toString(), 'error');
-        super.error(resposta.toString());
-    }
-    local(prefixo, mensagem) {
-        if (this.configService.get('APP_ENV') !== 'producao') {
-            if (typeof mensagem === 'object') {
-                mensagem = JSON.stringify(mensagem);
-            }
-            this.log(`${prefixo} ${mensagem}`);
-        }
-    }
-    capiturarException(erro, context) {
-        if (this.configService.get('APP_ENV') !== 'producao') {
-            super.error(erro.name, erro.message, erro?.stack);
-            return;
-        }
-        Sentry.captureException(erro, context);
-    }
 };
 exports.LoggerService = LoggerService;
 exports.LoggerService = LoggerService = __decorate([

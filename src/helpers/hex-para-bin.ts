@@ -12,14 +12,11 @@ export function hexParaBin(mensagem: string): string | undefined {
     return undefined;
   }
 
-  let resposta     = '';
-  const arrayDados = mensagem.split('');
-  for (let cont = 0; cont < arrayDados.length; cont++) {
-    if (arrayDados[cont] !== undefined) {
-      const valorDecimal = hexParaDec(arrayDados[cont]);
-      if (valorDecimal !== undefined) {
-        resposta += valorDecimal.toString(2).padStart(4, '0');
-      }
+  let resposta = '';
+  for (const caractere of mensagem) {
+    const valorDecimal = hexParaDec(caractere);
+    if (valorDecimal !== undefined) {
+      resposta += valorDecimal.toString(2).padStart(4, '0');
     }
   }
 

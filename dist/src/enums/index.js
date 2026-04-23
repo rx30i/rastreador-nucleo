@@ -19,4 +19,5 @@ __exportStar(require("./qualidade-sinal-gsm"), exports);
 __exportStar(require("./codificacao-msg"), exports);
 __exportStar(require("./comando-status"), exports);
 __exportStar(require("./pattern"), exports);
+__exportStar(require("./rabbitmq-filas"), exports);
 //# sourceMappingURL=index.js.map

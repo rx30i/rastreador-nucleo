@@ -34,6 +34,20 @@ export class EnviarComandoRastreadorService {
   ) {}
 
   /**
+   * Valida se o canal RabbitMQ está disponível para operações.
+   * Lança um erro se o canal não estiver inicializado.
+   *
+   * @throws {Error} Se o canal não estiver disponível
+   * @returns {Channel} O canal RabbitMQ ativo
+   */
+  private obterCanal(): Channel {
+    if (!this.channel) {
+      throw new Error('Canal RabbitMQ não está disponível. Verifique a conexão.');
+    }
+    return this.channel;
+  }
+
+  /**
    * Se o atributo amqpConnection não for uma instância válida, esse método vai gerar uma exception
    * que não é tratada o que vai fazer com o que a aplicação seja encerrada.
    *
@@ -71,6 +85,8 @@ export class EnviarComandoRastreadorService {
    * Se o rastreador não estiver conectado, uma nova tentativa de envio será feita depois de alguns segundos,
    * serão feitas 720 tentativas de envio do comando.
    *
+   * O parâmetro `comando` é uma string no formato Buffer, essa string é o comando que vai ser enviado ao rastreador.
+   *
    * @param {ConsumeMessage} mensagem
    * @param {Buffer} comando
    * @return {undefined}
@@ -79,8 +95,9 @@ export class EnviarComandoRastreadorService {
     const comandoEntity = this.decodificarMsg(mensagem);
     try {
       if (comandoEntity === undefined) {
-        this.channel?.ack(mensagem, false);
-        this.channel?.publish('amq.direct', 'rastreador.erro', mensagem.content);
+        const canal = this.obterCanal();
+        canal.ack(mensagem, false);
+        canal.publish('amq.direct', 'rastreador.erro', mensagem.content);
         return undefined;
       }
 
@@ -111,7 +128,7 @@ export class EnviarComandoRastreadorService {
    */
   private finalizarMsg(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage, comando: ComandoUsuarioEntity): void {
     if (msgEnviada) {
-      this.channel?.ack(rabbitMqMsg, false);
+      this.obterCanal().ack(rabbitMqMsg, false);
       this.publicarResposta(ComandoStatus.Enviado, comando);
     }
   }
@@ -125,16 +142,16 @@ export class EnviarComandoRastreadorService {
    *
    * @param  {boolean} msgEnviada
    * @param  {ConsumeMessage} rabbitMqMsg
-   * @returs {void}
+   * @return {undefined}
    */
-  private rejeitarMsg(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage): void {
+  private rejeitarMsg(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage): undefined {
     const headers = rabbitMqMsg.properties.headers;
     if (headers === undefined || !('x-death' in headers) || !Array.isArray(headers['x-death'])) {
       return undefined;
     }
 
     if (!msgEnviada && (headers['x-death'][0].count < this.tentativasEnvio)) {
-      this.channel?.nack(rabbitMqMsg, false, false);
+      this.obterCanal().nack(rabbitMqMsg, false, false);
     }
   }
 
@@ -158,8 +175,9 @@ export class EnviarComandoRastreadorService {
       this.publicarResposta(ComandoStatus.Erro, comando);
     }
 
-    this.channel?.ack(rabbitMqMsg, false);
-    this.channel?.publish(
+    const canal = this.obterCanal();
+    canal.ack(rabbitMqMsg, false);
+    canal.publish(
       'amq.direct',
       'rastreador.erro',
       rabbitMqMsg.content,
@@ -189,7 +207,7 @@ export class EnviarComandoRastreadorService {
 
     this.logger.local('COMANDO STATUS:', resposta.json());
     resposta.validar();
-    this.channel?.publish(
+    this.obterCanal().publish(
       'amq.direct',
       'rastreador.mensagem',
       Buffer.from(resposta.json(), 'ascii'),
@@ -219,6 +237,7 @@ export class EnviarComandoRastreadorService {
       return comandoEntity.valido() ? comandoEntity : undefined;
     } catch (erro) {
       this.logger.error(erro);
+      return undefined;
     }
   }
 }

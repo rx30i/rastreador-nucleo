@@ -3,12 +3,12 @@ export declare class DeclararFilasRabbitMqService {
     private readonly rabbitMqFilaCmdPausa;
     private readonly rabbitMqFilaCmd;
     constructor(rabbitMqFilaCmdPausa: string, rabbitMqFilaCmd: string);
-    declararExchange(channel: amqplib.Channel): Promise<void>;
-    declararQueue(channel: amqplib.Channel): Promise<void>;
-    bind(channel: amqplib.Channel): Promise<void>;
-    private queueRastreadorErro;
-    private queueRastreadorMensagem;
-    private queueRastreadorMensagemPausa;
-    private queueRastreadorCmd;
-    private queueRastreadorCmdPausa;
+    declararExchange(canal: amqplib.Channel): Promise<void>;
+    declararFila(canal: amqplib.Channel): Promise<void>;
+    vincular(canal: amqplib.Channel): Promise<void>;
+    private criarFilaRastreadorErro;
+    private criarFilaRastreadorMensagem;
+    private criarFilaRastreadorMensagemPausa;
+    private criarFilaRastreadorCmd;
+    private criarFilaRastreadorCmdPausa;
 }
