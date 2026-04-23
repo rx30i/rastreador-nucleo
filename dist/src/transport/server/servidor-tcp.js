@@ -90,6 +90,8 @@ class ServidorTcp extends microservices_1.Server {
     }
     mensagem(socket) {
         socket.on('data', (message) => void (async () => {
+            console.log('SERVIDOR HEX: ', message.toString('hex'));
+            console.log('SERVIDOR ASCII: ', message.toString());
             for (const resposta of this.separarMensagens(message)) {
                 const tcpContexto = new ctx_host_1.TcpContext([socket, resposta, (imei) => ServidorTcp.obterConexao(imei)]);
                 const msgFormatada = await this.deserializer.deserialize(resposta);
