@@ -34,6 +34,7 @@ async function bootstrap () {
       deserializer  : new Deserializer(),
       codificacaoMsg: CodificacaoMsg.HEX,
       delimitadorMsg: '',
+      prefixo       : ['7878', '7979'],
       sufixo        : '0d0a',
       tratarErro    : logger,
       servidor      : {
@@ -62,7 +63,7 @@ bootstrap();
 | `servidor.port` | `number` | Sim | Porta do servidor |
 | `tratarErro` | `LoggerService` | Sim | Logger para tratamento de erros |
 | `codificacaoMsg` | `CodificacaoMsg` | Sim | Codificação das mensagens (`ascii` ou `hex`) |
-| `prefixo` | `string` | Não | Prefixo para identificar início das mensagens |
+| `prefixo` | `string \| string[]` | Não | Prefixo ou prefixos alternativos para identificar início das mensagens |
 | `sufixo` | `string` | Não | Sufixo para identificar fim das mensagens |
 
 ### Métodos Principais
@@ -200,3 +201,19 @@ O servidor trata automaticamente mensagens concatenadas pelo protocolo TCP:
 
 1. **Mensagens no formato NestJS**: `tamanho#mensagem` (ex: `25#{"pattern":"teste"}`)
 2. **Mensagens de rastreadores**: Separadas por `prefixo` e/ou `sufixo` configurados
+
+Quando `prefixo` receber um array, cada item será tratado como um prefixo alternativo válido. Exemplo:
+
+```typescript
+new ServidorTcp({
+  deserializer  : new Deserializer(),
+  codificacaoMsg: CodificacaoMsg.HEX,
+  prefixo       : ['7878', '7979'],
+  sufixo        : '0d0a',
+  tratarErro    : logger,
+  servidor      : {
+    path: servidor,
+    port: porta,
+  },
+});
+```

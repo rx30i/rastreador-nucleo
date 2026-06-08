@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import { IncomingRequest, IncomingEvent } from '@nestjs/microservices';
 import { SepararMensagens } from './separar-mensagens';
-import { IConsumerDeserializer } from '../../contracts';
+import { IConsumerDeserializer, IServidorTCPConfig } from '../../contracts';
 import { CodificacaoMsg } from '../../enums';
 import { Logger } from '@nestjs/common';
 
@@ -16,48 +16,40 @@ class Deserializer implements IConsumerDeserializer {
   }
 }
 
+function criarSeparadorMensagens(configuracao?: Partial<IServidorTCPConfig>): SepararMensagens {
+  return new SepararMensagens({
+    codificacaoMsg: CodificacaoMsg.HEX,
+    deserializer  : new Deserializer(),
+    tratarErro    : new Logger(),
+    servidor      : {
+      path: '127.0.0.1',
+      port: 0,
+    },
+    ...configuracao,
+  });
+}
+
 describe('SepararMensagens', () => {
   let sufixo: SepararMensagens;
   let prefixo: SepararMensagens;
   let prefixoSufixo: SepararMensagens;
 
   beforeEach(() => {
-    prefixoSufixo = new SepararMensagens({
-      codificacaoMsg: CodificacaoMsg.HEX,
-      deserializer  : new Deserializer(),
-      tratarErro    : new Logger(),
-      prefixo       : '7878',
-      sufixo        : '0d0a',
-      servidor      : {
-        path: '127.0.0.1',
-        port: 0,
-      },
+    prefixoSufixo = criarSeparadorMensagens({
+      prefixo: '7878',
+      sufixo : '0d0a',
     });
 
-    prefixo = new SepararMensagens({
-      codificacaoMsg: CodificacaoMsg.HEX,
-      deserializer  : new Deserializer(),
-      tratarErro    : new Logger(),
-      prefixo       : '7878',
-      servidor      : {
-        path: '127.0.0.1',
-        port: 0,
-      },
+    prefixo = criarSeparadorMensagens({
+      prefixo: '7878',
     });
 
-    sufixo = new SepararMensagens({
-      codificacaoMsg: CodificacaoMsg.HEX,
-      deserializer  : new Deserializer(),
-      tratarErro    : new Logger(),
-      sufixo        : '0d0a',
-      servidor      : {
-        path: '127.0.0.1',
-        port: 0,
-      },
+    sufixo = criarSeparadorMensagens({
+      sufixo: '0d0a',
     });
   });
 
-  describe('Método obterMensagens() usando prefixo e sufixo para separar as mensagens', () => {
+  describe('Metodo obterMensagens() usando prefixo e sufixo para separar as mensagens', () => {
     it('Recebe uma mensagem valida e retorna um array contendo a mensagem', () => {
       const mensagem = '78780d01086266708570787800007ea40d0a';
       const resposta = ['78780d01086266708570787800007ea40d0a'];
@@ -90,7 +82,7 @@ describe('SepararMensagens', () => {
     });
   });
 
-  describe('Método obterMensagens() usando prefixo para separar as mensagens', () => {
+  describe('Metodo obterMensagens() usando prefixo para separar as mensagens', () => {
     it('Recebe uma mensagem valida e retorna um array contendo a mensagem', () => {
       const mensagem = '78780d01086266708570797900007ea40d0a';
       const resposta = ['78780d01086266708570797900007ea40d0a'];
@@ -111,7 +103,103 @@ describe('SepararMensagens', () => {
     });
   });
 
-  describe('Método obterMensagens() usando sufixo para separar as mensagens', () => {
+  describe('Metodo obterMensagens() usando lista de prefixos', () => {
+    it('Recebe mensagens validas com prefixos alternativos e sufixo e deve retornar cada mensagem', () => {
+      const prefixosAlternativos = criarSeparadorMensagens({
+        prefixo: ['7878', '7979'],
+        sufixo : '0d0a',
+      });
+      const mensagemPrefixo7878 = '78780d01086266708570aaaa00007ea40d0a';
+      const mensagemPrefixo7979 = '79790d01086266708570bbbb00007ea40d0a';
+      const mensagem = `${mensagemPrefixo7878}${mensagemPrefixo7979}`;
+      const resposta = [mensagemPrefixo7878, mensagemPrefixo7979];
+
+      expect(prefixosAlternativos.obterMensagens(mensagem)).toEqual(resposta);
+    });
+
+    it('Recebe mensagens validas com prefixos alternativos sem sufixo e deve retornar cada mensagem', () => {
+      const prefixosAlternativos = criarSeparadorMensagens({
+        prefixo: ['7878', '7979'],
+      });
+      const mensagemPrefixo7878 = '78780d01086266708570aaaa00007ea40d0a';
+      const mensagemPrefixo7979 = '79790d01086266708570bbbb00007ea40d0a';
+      const mensagem = `${mensagemPrefixo7878}${mensagemPrefixo7979}`;
+      const resposta = [mensagemPrefixo7878, mensagemPrefixo7979];
+
+      expect(prefixosAlternativos.obterMensagens(mensagem)).toEqual(resposta);
+    });
+
+    it('Recebe prefixos duplicados e deve separar cada mensagem uma unica vez', () => {
+      const prefixosAlternativos = criarSeparadorMensagens({
+        prefixo: ['7878', '7979', '7878'],
+        sufixo : '0d0a',
+      });
+      const mensagemPrefixo7878 = '78780d01086266708570aaaa00007ea40d0a';
+      const mensagemPrefixo7979 = '79790d01086266708570bbbb00007ea40d0a';
+      const mensagem = `${mensagemPrefixo7878}${mensagemPrefixo7979}`;
+      const resposta = [mensagemPrefixo7878, mensagemPrefixo7979];
+
+      expect(prefixosAlternativos.obterMensagens(mensagem)).toEqual(resposta);
+    });
+
+    it('Recebe prefixos em caixa alta e deve normalizar a comparacao', () => {
+      const prefixosAlternativos = criarSeparadorMensagens({
+        prefixo: ['ABCD', 'EFAB'],
+        sufixo : '0d0a',
+      });
+      const mensagemPrefixoAbcd = 'abcd00010d0a';
+      const mensagemPrefixoEfab = 'efab00020d0a';
+      const mensagem = `${mensagemPrefixoAbcd}${mensagemPrefixoEfab}`;
+      const resposta = [mensagemPrefixoAbcd, mensagemPrefixoEfab];
+
+      expect(prefixosAlternativos.obterMensagens(mensagem)).toEqual(resposta);
+    });
+
+    it('Recebe mensagem com prefixo nao configurado e deve retornar a mensagem recebida', () => {
+      const prefixosAlternativos = criarSeparadorMensagens({
+        prefixo: ['7878', '7979'],
+        sufixo : '0d0a',
+      });
+      const mensagem = '99990d01086266708570787800007ea40d0a';
+
+      expect(prefixosAlternativos.obterMensagens(mensagem)).toEqual([mensagem]);
+    });
+
+    it('Recebe mensagem valida seguida de mensagem invalida e deve retornar apenas a mensagem valida', () => {
+      const prefixosAlternativos = criarSeparadorMensagens({
+        prefixo: ['7878', '7979'],
+        sufixo : '0d0a',
+      });
+      const mensagemValida = '79790d01086266708570797900007ea40d0a';
+      const mensagemInvalida = '99990d01086266708570787800007ea40d0a';
+
+      expect(prefixosAlternativos.obterMensagens(`${mensagemValida}${mensagemInvalida}`)).toEqual([mensagemValida]);
+    });
+
+    it('Recebe array de prefixos vazio sem sufixo e deve tratar como prefixo nao informado', () => {
+      const prefixosVazios = criarSeparadorMensagens({
+        prefixo: [],
+      });
+      const mensagem = '78780d01086266708570787800007ea40d0a';
+
+      expect(prefixosVazios.obterMensagens(mensagem)).toEqual([]);
+    });
+
+    it('Recebe array apenas com prefixos vazios e deve separar mensagens pelo sufixo informado', () => {
+      const prefixosVazios = criarSeparadorMensagens({
+        prefixo: ['', ''],
+        sufixo : '0d0a',
+      });
+      const mensagemPrefixo7878 = '78780d01086266708570787800007ea40d0a';
+      const mensagemPrefixo7979 = '79790d01086266708570797900007ea40d0a';
+      const mensagem = `${mensagemPrefixo7878}${mensagemPrefixo7979}`;
+      const resposta = [mensagemPrefixo7878, mensagemPrefixo7979];
+
+      expect(prefixosVazios.obterMensagens(mensagem)).toEqual(resposta);
+    });
+  });
+
+  describe('Metodo obterMensagens() usando sufixo para separar as mensagens', () => {
     it('Recebe uma mensagem valida e retorna um array contendo a mensagem', () => {
       const mensagem = '78780d01086266708570797900007ea40d0a';
       const resposta = ['78780d01086266708570797900007ea40d0a'];
@@ -126,7 +214,7 @@ describe('SepararMensagens', () => {
       expect(sufixo.obterMensagens(mensagem)).toEqual(resposta);
     });
 
-    it('Recebe uma mensagem com sufixo invalido e deve retorna um array vazío', () => {
+    it('Recebe uma mensagem com sufixo invalido e deve retorna um array vazio', () => {
       const mensagem = '78780d01086266708570787800007ea40d01';
       expect(sufixo.obterMensagens(mensagem)).toEqual([]);
     });

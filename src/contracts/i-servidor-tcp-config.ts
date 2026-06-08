@@ -23,13 +23,17 @@ export interface IServidorTCPConfig {
    * com um curto intervalo de tempo entre os envios, por isso as mensagens
    * recebidas devem ser verificadas e tratadas.
    *
-   * O atributo "prefixo" é um código que define o início da mensagem, toda
-   * mensagem recebida deve ter esse prefixo no seu início. Através desse
-   * prefixo é possível verificar a quantidade de mensagens recebidas e separá-las.
-   * Se a mensagem não possui o prefixo ela não deve ser descartada, deve ser propagada
-   * para para a aplicação e na aplicação será verificada se é valida ou não.
+   * O atributo "prefixo" define o início da mensagem. Pode receber uma string
+   * ou uma lista de strings quando houver mais de um prefixo válido para o
+   * mesmo servidor TCP. Quando uma lista for informada, qualquer item da lista
+   * pode marcar o início de uma mensagem.
+   *
+   * Através desse prefixo é possível verificar a quantidade de mensagens
+   * recebidas e separá-las. Se a mensagem não possui um prefixo reconhecido,
+   * ela não deve ser descartada, deve ser propagada para para a aplicação e
+   * na aplicação será verificada se é valida ou não.
   */
-  prefixo?: string;
+  prefixo?: string | string[];
 
   /**
    * O protocolo TCP concatena as mensagens enviadas em um mesmo canal
