@@ -54,29 +54,75 @@ let LoggerService = class LoggerService extends common_1.ConsoleLogger {
     }
     local2(mensagem, prefixo) {
         if (this.configService.get('APP_ENV') !== 'producao') {
-            if (prefixo && Object.prototype.toString.call(mensagem) === '[object Object]') {
-                mensagem = `${prefixo}: ${JSON.stringify(mensagem)}`;
-            }
-            if (prefixo && typeof mensagem === 'string') {
-                mensagem = `${prefixo}: ${mensagem}`;
-            }
-            super.log(mensagem, this.context);
+            const mensagemFormatada = this.formatarMensagem(mensagem, prefixo);
+            super.log(mensagemFormatada, this.context);
         }
     }
     capiturarError(erro) {
-        if (erro && !(erro instanceof Error) &&
-            Object.prototype.toString.call(erro) === '[object Object]') {
-            erro = new Error(JSON.stringify(erro));
-        }
-        else if (!(erro instanceof Error) &&
-            Object.prototype.toString.call(erro) !== '[object Object]') {
-            erro = new Error(String(erro));
-        }
+        const erroNormalizado = this.normalizarErro(erro);
         if (this.configService.get('APP_ENV') !== 'producao') {
-            super.error(erro);
+            super.error(erroNormalizado);
             return;
         }
-        Sentry.captureException(erro);
+        Sentry.captureException(erroNormalizado);
+    }
+    formatarMensagem(mensagem, prefixo) {
+        if (!prefixo) {
+            return mensagem;
+        }
+        if (this.valorEhObjetoComum(mensagem)) {
+            return `${prefixo}: ${this.serializarValor(mensagem)}`;
+        }
+        if (typeof mensagem === 'string') {
+            return `${prefixo}: ${mensagem}`;
+        }
+        return mensagem;
+    }
+    normalizarErro(erro) {
+        if (erro instanceof Error) {
+            return erro;
+        }
+        if (this.valorEhObjetoComum(erro)) {
+            return new Error(this.serializarValor(erro));
+        }
+        return new Error(this.converterValorParaTexto(erro));
+    }
+    serializarValor(valor) {
+        const referenciasVisitadas = new WeakSet();
+        try {
+            const valorSerializado = JSON.stringify(valor, (_chave, valorAtual) => this.normalizarValorSerializado(valorAtual, referenciasVisitadas));
+            if (typeof valorSerializado === 'string') {
+                return valorSerializado;
+            }
+            return this.converterValorParaTexto(valor);
+        }
+        catch {
+            return this.converterValorParaTexto(valor);
+        }
+    }
+    normalizarValorSerializado(valorAtual, referenciasVisitadas) {
+        if (typeof valorAtual === 'bigint') {
+            return valorAtual.toString();
+        }
+        if (typeof valorAtual !== 'object' || valorAtual === null) {
+            return valorAtual;
+        }
+        if (referenciasVisitadas.has(valorAtual)) {
+            return '[Referencia circular]';
+        }
+        referenciasVisitadas.add(valorAtual);
+        return valorAtual;
+    }
+    valorEhObjetoComum(valor) {
+        return Object.prototype.toString.call(valor) === '[object Object]';
+    }
+    converterValorParaTexto(valor) {
+        try {
+            return String(valor);
+        }
+        catch {
+            return '[Valor nao serializavel]';
+        }
     }
 };
 exports.LoggerService = LoggerService;

@@ -5,4 +5,10 @@ export declare class LoggerService extends ConsoleLogger {
     constructor(configService: ConfigService);
     local2(mensagem: unknown, prefixo?: string): undefined;
     capiturarError(erro: unknown): undefined;
+    private formatarMensagem;
+    private normalizarErro;
+    private serializarValor;
+    private normalizarValorSerializado;
+    private valorEhObjetoComum;
+    private converterValorParaTexto;
 }
