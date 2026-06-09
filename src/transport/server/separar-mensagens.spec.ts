@@ -7,11 +7,11 @@ import { Logger } from '@nestjs/common';
 
 
 class Deserializer implements IConsumerDeserializer {
-  public obterImei(menagem: string): string {
+  public obterImei(_mensagem: string): string {
     throw new Error('Method not implemented.');
   }
 
-  public deserialize(value: any, options?: Record<string, any>): IncomingRequest | IncomingEvent | Promise<IncomingRequest | IncomingEvent> {
+  public deserialize(_value: any, _options?: Record<string, any>): IncomingRequest | IncomingEvent | Promise<IncomingRequest | IncomingEvent> {
     throw new Error('Method not implemented.');
   }
 }

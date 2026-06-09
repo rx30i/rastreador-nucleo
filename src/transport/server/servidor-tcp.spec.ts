@@ -2,6 +2,7 @@ import { IncomingRequest, IncomingEvent } from '@nestjs/microservices';
 import { ServidorTcp } from './servidor-tcp';
 import { IConsumerDeserializer, IServidorTCPConfig, ISocket } from '../../contracts';
 import { CodificacaoMsg } from '../../enums';
+import { TcpContext } from '../ctx-host';
 import { Logger } from '@nestjs/common';
 import * as Net from 'node:net';
 
@@ -16,6 +17,16 @@ class DeserializerMock implements IConsumerDeserializer {
       return { pattern: 'evento', data: value } as IncomingEvent;
     }
     return { pattern: 'mensagem', id: '1', data: value } as IncomingRequest;
+  }
+}
+
+class DeserializerSuntechMock implements IConsumerDeserializer {
+  public obterImei(_mensagem: string): string {
+    return '';
+  }
+
+  public deserialize(value: string): IncomingEvent {
+    return { pattern: 'suntech', data: value } as IncomingEvent;
   }
 }
 
@@ -44,6 +55,34 @@ function criarSocketMock(overrides?: Partial<ISocket>): ISocket {
     ...overrides,
   } as unknown as ISocket;
   return socket;
+}
+
+function obterCallbackDados(socket: ISocket): (mensagem: Buffer) => void {
+  const chamadas = (socket.on as unknown as jest.Mock).mock.calls as [string, (mensagem: Buffer) => void][];
+  const chamadaDados = chamadas.find((chamada: [string, (mensagem: Buffer) => void]): boolean =>
+    chamada[0] === 'data',
+  );
+
+  if (chamadaDados === undefined) {
+    throw new Error('Callback de dados nao registrado');
+  }
+
+  return chamadaDados[1];
+}
+
+async function aguardarProcessamentoAssincrono(): Promise<void> {
+  await new Promise<void>((resolve): void => {
+    setImmediate(resolve);
+  });
+}
+
+function criarConsumidorCapturandoContextos(
+  contextosRecebidos: TcpContext[],
+): (_mensagem: string, contexto: TcpContext) => Promise<void> {
+  return (_mensagem: string, contexto: TcpContext): Promise<void> => {
+    contextosRecebidos.push(contexto);
+    return Promise.resolve();
+  };
 }
 
 describe('ServidorTcp', () => {
@@ -79,7 +118,7 @@ describe('ServidorTcp', () => {
     });
 
     it('deve criar um servidor TCP', () => {
-      servidorTcp.listen(() => {});
+      servidorTcp.listen(jest.fn());
       const servidor = servidorTcp.unwrap();
       expect(servidor).toBeDefined();
       expect(servidor).toBeInstanceOf(Net.Server);
@@ -94,25 +133,29 @@ describe('ServidorTcp', () => {
     });
 
     it('deve encerrar o servidor TCP', (done) => {
-      servidorTcp.listen(() => {});
+      servidorTcp.listen(jest.fn());
       servidorTcp.close();
 
       const servidor = servidorTcp.unwrap();
-      expect(servidor?.listening).toBe(false);
+      expect(servidor.listening).toBe(false);
       done();
     });
 
     it('deve destruir todas as conexões ativas', (done) => {
-      const socketMock = criarSocketMock({ imei: '123456789' });
+      const destruirSocketMock = jest.fn();
+      const socketMock = criarSocketMock({
+        destroy: destruirSocketMock as unknown as ISocket['destroy'],
+        imei   : '123456789',
+      });
 
-      servidorTcp.listen(() => {});
+      servidorTcp.listen(jest.fn());
 
       // Simula uma conexão salva
       (ServidorTcp as unknown as { conexoesTcp: Map<string, ISocket> }).conexoesTcp.set('123456789', socketMock);
 
       servidorTcp.close();
 
-      expect(socketMock.destroy).toHaveBeenCalled();
+      expect(destruirSocketMock).toHaveBeenCalled();
       expect(ServidorTcp.obterConexao('123456789')).toBeNull();
       done();
     });
@@ -121,7 +164,7 @@ describe('ServidorTcp', () => {
       const socketMock1 = criarSocketMock({ imei: '111111111' });
       const socketMock2 = criarSocketMock({ imei: '222222222' });
 
-      servidorTcp.listen(() => {});
+      servidorTcp.listen(jest.fn());
 
       (ServidorTcp as unknown as { conexoesTcp: Map<string, ISocket> }).conexoesTcp.set('111111111', socketMock1);
       (ServidorTcp as unknown as { conexoesTcp: Map<string, ISocket> }).conexoesTcp.set('222222222', socketMock2);
@@ -156,7 +199,7 @@ describe('ServidorTcp', () => {
     });
 
     it('deve retornar o servidor TCP nativo após listen', (done) => {
-      servidorTcp.listen(() => {});
+      servidorTcp.listen(jest.fn());
       const servidor = servidorTcp.unwrap();
       expect(servidor).toBeInstanceOf(Net.Server);
       servidorTcp.close();
@@ -166,20 +209,21 @@ describe('ServidorTcp', () => {
 
   describe('on', () => {
     it('deve registrar um listener de evento no servidor', (done) => {
-      servidorTcp.listen(() => {});
+      servidorTcp.listen(jest.fn());
 
       const callback = jest.fn();
       servidorTcp.on('connection', callback);
 
       const servidor = servidorTcp.unwrap();
-      expect(servidor?.listenerCount('connection')).toBeGreaterThan(0);
+      expect(servidor.listenerCount('connection')).toBeGreaterThan(0);
       servidorTcp.close();
       done();
     });
 
     it('não deve lançar erro se o servidor não foi iniciado', () => {
+      const callback = jest.fn();
       expect(() => {
-        servidorTcp.on('connection', () => {});
+        servidorTcp.on('connection', callback);
       }).not.toThrow();
     });
   });
@@ -194,7 +238,7 @@ describe('ServidorTcp', () => {
 
     it('deve separar mensagens no formato NestJS (tamanho#mensagem)', () => {
       const jsonStr = '{"pattern":"teste","data":"ok"}';
-      const mensagem = Buffer.from(`${jsonStr.length}#${jsonStr}`);
+      const mensagem = Buffer.from(`${jsonStr.length.toString()}#${jsonStr}`);
       const resultado = servidorTcp.separarMensagens(mensagem);
 
       expect(resultado).toHaveLength(1);
@@ -204,7 +248,7 @@ describe('ServidorTcp', () => {
     it('deve separar múltiplas mensagens no formato NestJS', () => {
       const json1 = '{"a":1}';
       const json2 = '{"b":"teste"}';
-      const mensagem = Buffer.from(`${json1.length}#${json1}${json2.length}#${json2}`);
+      const mensagem = Buffer.from(`${json1.length.toString()}#${json1}${json2.length.toString()}#${json2}`);
       const resultado = servidorTcp.separarMensagens(mensagem);
 
       expect(resultado).toHaveLength(2);
@@ -220,6 +264,106 @@ describe('ServidorTcp', () => {
     });
   });
 
+  describe('mensagem', () => {
+    beforeEach(() => {
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg: CodificacaoMsg.ASCII,
+        deserializer  : new DeserializerSuntechMock(),
+        prefixo       : ['STT', 'ASTT'],
+      }));
+    });
+
+    it('deve entregar ao consumidor o contexto com a mensagem bruta Suntech ASCII original', async () => {
+      const socketMock = criarSocketMock();
+      const contextosRecebidos: TcpContext[] = [];
+      const consumidor = jest.fn(criarConsumidorCapturandoContextos(contextosRecebidos));
+      servidorTcp.addHandler('suntech', consumidor, true);
+
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+
+      const callbackDados = obterCallbackDados(socketMock);
+      callbackDados(Buffer.from('ASTT;0360000001;000007;26;010;1\r', 'ascii'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).toHaveBeenCalledTimes(1);
+      expect(contextosRecebidos[0].mensagem()).toBe('astt;0360000001;000007;26;010;1');
+      expect(contextosRecebidos[0].mensagemBruta()).toBe('ASTT;0360000001;000007;26;010;1\r');
+    });
+
+    it('deve preservar a mensagem bruta correta para mensagens Suntech ASCII concatenadas', async () => {
+      const socketMock = criarSocketMock();
+      const contextosRecebidos: TcpContext[] = [];
+      const consumidor = jest.fn(criarConsumidorCapturandoContextos(contextosRecebidos));
+      servidorTcp.addHandler('suntech', consumidor, true);
+
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+
+      const primeiraMensagem = 'ASTT;0360000001;000007;26;010;1\r';
+      const segundaMensagem = 'STT;0360000002;000008;26;010;2\r';
+      const callbackDados = obterCallbackDados(socketMock);
+      callbackDados(Buffer.from(`${primeiraMensagem}${segundaMensagem}`, 'ascii'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).toHaveBeenCalledTimes(2);
+      expect(contextosRecebidos[0].mensagemBruta()).toBe(primeiraMensagem);
+      expect(contextosRecebidos[1].mensagemBruta()).toBe(segundaMensagem);
+    });
+
+    it('deve preservar o bruto de mensagens Suntech concatenadas com prefixos alternativos', async () => {
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg: CodificacaoMsg.ASCII,
+        deserializer  : new DeserializerSuntechMock(),
+        prefixo       : ['STT', 'ASTT', 'AALT'],
+      }));
+      const socketMock = criarSocketMock();
+      const contextosRecebidos: TcpContext[] = [];
+      const consumidor = jest.fn(criarConsumidorCapturandoContextos(contextosRecebidos));
+      servidorTcp.addHandler('suntech', consumidor, true);
+
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+
+      const primeiraMensagem = 'ASTT;1\r';
+      const segundaMensagem = 'AALT;2\r';
+      const callbackDados = obterCallbackDados(socketMock);
+      callbackDados(Buffer.from(`${primeiraMensagem}${segundaMensagem}`, 'ascii'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).toHaveBeenCalledTimes(2);
+      expect(contextosRecebidos[0].mensagemBruta()).toBe(primeiraMensagem);
+      expect(contextosRecebidos[1].mensagemBruta()).toBe(segundaMensagem);
+    });
+
+    it('deve preservar terminador composto em mensagens Suntech ASCII separadas por sufixo', async () => {
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg: CodificacaoMsg.ASCII,
+        deserializer  : new DeserializerSuntechMock(),
+        sufixo        : '\r\n',
+      }));
+      const socketMock = criarSocketMock();
+      const contextosRecebidos: TcpContext[] = [];
+      const consumidor = jest.fn(criarConsumidorCapturandoContextos(contextosRecebidos));
+      servidorTcp.addHandler('suntech', consumidor, true);
+
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+
+      const primeiraMensagem = 'ASTT;1\r\n';
+      const segundaMensagem = 'AALT;2\r\n';
+      const callbackDados = obterCallbackDados(socketMock);
+      callbackDados(Buffer.from(`${primeiraMensagem}${segundaMensagem}`, 'ascii'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).toHaveBeenCalledTimes(2);
+      expect(contextosRecebidos[0].mensagem()).toBe('astt;1');
+      expect(contextosRecebidos[0].mensagemBruta()).toBe(primeiraMensagem);
+      expect(contextosRecebidos[1].mensagem()).toBe('aalt;2');
+      expect(contextosRecebidos[1].mensagemBruta()).toBe(segundaMensagem);
+    });
+  });
+
   describe('formatarResposta', () => {
     it('deve formatar a resposta com tamanho e delimitador', () => {
       // Acessando método privado via reflexão para teste
@@ -228,7 +372,7 @@ describe('ServidorTcp', () => {
       const resultado = servidor.formatarResposta(mensagem);
 
       const esperado = JSON.stringify(mensagem);
-      expect(resultado).toBe(`${esperado.length}#${esperado}`);
+      expect(resultado).toBe(`${esperado.length.toString()}#${esperado}`);
     });
   });
 

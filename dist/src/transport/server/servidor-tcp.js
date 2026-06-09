@@ -90,16 +90,21 @@ class ServidorTcp extends microservices_1.Server {
     }
     mensagem(socket) {
         socket.on('data', (message) => void (async () => {
-            for (const resposta of this.separarMensagens(message)) {
-                const tcpContexto = new ctx_host_1.TcpContext([socket, resposta, (imei) => ServidorTcp.obterConexao(imei)]);
-                const msgFormatada = await this.deserializer.deserialize(resposta);
+            for (const resposta of this.separarMensagensComBruto(message)) {
+                const tcpContexto = new ctx_host_1.TcpContext([
+                    socket,
+                    resposta.mensagem,
+                    (imei) => ServidorTcp.obterConexao(imei),
+                    resposta.mensagemBruta,
+                ]);
+                const msgFormatada = await this.deserializer.deserialize(resposta.mensagem);
                 const consumidor = this.getHandlerByPattern(msgFormatada.pattern);
                 if (consumidor === null) {
                     const erro = 'Não há um consumidor para a mensagem';
-                    this.configuracao.tratarErro.error(`Class ServidorTcp ${erro} ${resposta}`);
+                    this.configuracao.tratarErro.error(`Class ServidorTcp ${erro} ${resposta.mensagem}`);
                     continue;
                 }
-                this.salvarConexao(socket, resposta);
+                this.salvarConexao(socket, resposta.mensagem);
                 if (consumidor.isEventHandler === true) {
                     await this.eventPattern(tcpContexto, msgFormatada);
                 }
@@ -198,6 +203,10 @@ class ServidorTcp extends microservices_1.Server {
         });
     }
     separarMensagens(mensagem) {
+        return this.separarMensagensComBruto(mensagem)
+            .map((mensagemSeparada) => mensagemSeparada.mensagem);
+    }
+    separarMensagensComBruto(mensagem) {
         let mensagemString = this.stringDecoder.write(mensagem);
         const quantidadeMenagem = (mensagemString.match(/\d+#{/g) ?? []).length;
         if (quantidadeMenagem > 0) {
@@ -207,7 +216,11 @@ class ServidorTcp extends microservices_1.Server {
                 const msgSemDelimidador = mensagemString.substring(posicaoDelimitador + 1);
                 const tamanhoMensagem = parseInt(mensagemString.substring(0, posicaoDelimitador), 10);
                 if (!isNaN(tamanhoMensagem)) {
-                    arrayMensagens.push(msgSemDelimidador.substring(0, tamanhoMensagem));
+                    const mensagemSeparada = msgSemDelimidador.substring(0, tamanhoMensagem);
+                    arrayMensagens.push({
+                        mensagem: mensagemSeparada,
+                        mensagemBruta: mensagemSeparada,
+                    });
                     mensagemString = msgSemDelimidador.substring(tamanhoMensagem);
                 }
             }
@@ -215,7 +228,7 @@ class ServidorTcp extends microservices_1.Server {
         }
         const codificacao = this.configuracao.codificacaoMsg;
         const demaisMsg = mensagem.toString(codificacao);
-        return this.separarMsgs.obterMensagens(demaisMsg);
+        return this.separarMsgs.obterMensagensComBruto(demaisMsg);
     }
 }
 exports.ServidorTcp = ServidorTcp;

@@ -182,6 +182,32 @@ export class ReceberMsgLoginController {
 }
 ```
 
+### Contexto TCP
+
+Controllers que recebem `@Ctx() ctx: TcpContext` podem acessar duas representacoes da mensagem:
+
+- `ctx.mensagem()` retorna a mensagem usada pelo transporte para roteamento e desserializacao. Ela preserva o comportamento historico do servidor TCP e pode estar normalizada, por exemplo em caixa baixa e sem quebras de linha.
+- `ctx.mensagemBruta()` retorna o trecho original recebido do socket para aquela mensagem, preservando caixa, separadores e terminadores como `\r` e `\n`. Quando o transporte nao tiver uma mensagem bruta separada, esse metodo retorna o mesmo valor de `ctx.mensagem()`.
+
+Use `ctx.mensagemBruta()` quando o protocolo exigir o pacote ASCII original para calculos de ACK ou checksum, como nas mensagens Suntech `ASTT`, `AALT`, `ATRV` e `ACID`.
+
+```typescript
+import { Ctx, EventPattern, Payload } from '@nestjs/microservices';
+import { TcpContext, Pattern } from 'rastreador-nucleo/dist/src';
+import { Controller } from '@nestjs/common';
+
+@Controller()
+export class ReceberMsgSuntechController {
+  @EventPattern(Pattern.LOGIN)
+  public async receber(@Payload() mensagem: string, @Ctx() ctx: TcpContext): Promise<void> {
+    const mensagemParaRoteamento = ctx.mensagem();
+    const mensagemOriginal = ctx.mensagemBruta();
+
+    // Calcule o ACK com mensagemOriginal quando o checksum depender do pacote ASCII recebido.
+  }
+}
+```
+
 ### Enviando Comandos para Clientes
 
 ```typescript

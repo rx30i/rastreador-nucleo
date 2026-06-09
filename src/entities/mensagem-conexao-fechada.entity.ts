@@ -18,7 +18,12 @@ export class MensagemConexaoFechadaEntity {
   }
 
   public obterObjeto(): IMensagemConexaoFechada {
-    return { ...this };
+    return {
+      dataHora  : this.dataHora,
+      imei      : this.imei,
+      integracao: this.integracao,
+      pattern   : this.pattern,
+    };
   }
 
   /**

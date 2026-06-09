@@ -7,6 +7,10 @@ class SepararMensagens {
         this.servidorTCPConfig = servidorTCPConfig;
     }
     obterMensagens(mensagem) {
+        return this.obterMensagensComBruto(mensagem)
+            .map((mensagemSeparada) => mensagemSeparada.mensagem);
+    }
+    obterMensagensComBruto(mensagem) {
         const mensagens = [];
         if (!mensagem || typeof mensagem !== 'string' || mensagem.length === 0) {
             return mensagens;
@@ -48,54 +52,59 @@ class SepararMensagens {
         const prefixosOrdenados = this.ordenarPrefixosPorTamanho(prefixos);
         const posicoesDosPrefixos = this.obterPosicoesDosPrefixos(mensagemNormalizada, prefixosOrdenados);
         if (posicoesDosPrefixos[0] !== 0) {
-            mensagens.push(mensagemNormalizada);
+            mensagens.push(this.criarMensagemSeparada(mensagemNormalizada, mensagem));
             return mensagens;
         }
         for (let indice = 0; indice < posicoesDosPrefixos.length; indice++) {
             const posicaoInicial = posicoesDosPrefixos[indice];
             const posicaoFinal = posicoesDosPrefixos[indice + 1] ?? mensagemNormalizada.length;
             const resposta = mensagemNormalizada.substring(posicaoInicial, posicaoFinal);
+            const respostaBruta = mensagem.substring(posicaoInicial, posicaoFinal);
             if (resposta !== '') {
-                mensagens.push(this.removerQuebrasDeLinha(resposta));
+                mensagens.push(this.criarMensagemSeparada(this.removerQuebrasDeLinha(resposta), respostaBruta));
             }
         }
         return mensagens;
     }
     separarMsgPeloSufixo(mensagem, sufixo) {
         const mensagens = [];
-        let mensagemNormalizada = mensagem.toLowerCase();
+        const mensagemNormalizada = mensagem.toLowerCase();
         if (!mensagemNormalizada.includes(sufixo)) {
             return mensagens;
         }
-        let posicaoSufixo = mensagemNormalizada.indexOf(sufixo);
+        let posicaoInicial = 0;
+        let posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
         while (posicaoSufixo !== -1) {
             const fimMensagem = posicaoSufixo + sufixo.length;
-            const mensagemCompleta = mensagemNormalizada.substring(0, fimMensagem);
-            mensagens.push(this.removerQuebrasDeLinha(mensagemCompleta));
-            mensagemNormalizada = mensagemNormalizada.substring(fimMensagem);
-            posicaoSufixo = mensagemNormalizada.indexOf(sufixo);
+            const mensagemCompleta = mensagemNormalizada.substring(posicaoInicial, fimMensagem);
+            const mensagemBruta = mensagem.substring(posicaoInicial, fimMensagem);
+            mensagens.push(this.criarMensagemSeparada(this.removerQuebrasDeLinha(mensagemCompleta), mensagemBruta));
+            posicaoInicial = fimMensagem;
+            posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
         }
         return mensagens;
     }
     separarMsgPeloPrefixoSufixo(mensagem, prefixos, sufixo) {
         const mensagens = [];
         const prefixosOrdenados = this.ordenarPrefixosPorTamanho(prefixos);
-        let mensagemNormalizada = mensagem.toLowerCase();
-        while (mensagemNormalizada.length > 0) {
-            if (this.obterPrefixoNaPosicao(mensagemNormalizada, prefixosOrdenados, 0) === undefined) {
+        const mensagemNormalizada = mensagem.toLowerCase();
+        let posicaoInicial = 0;
+        while (posicaoInicial < mensagemNormalizada.length) {
+            if (this.obterPrefixoNaPosicao(mensagemNormalizada, prefixosOrdenados, posicaoInicial) === undefined) {
                 break;
             }
-            const posicaoSufixo = mensagemNormalizada.indexOf(sufixo);
+            const posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
             if (posicaoSufixo === -1) {
                 break;
             }
             const fimMensagem = posicaoSufixo + sufixo.length;
-            const mensagemCompleta = mensagemNormalizada.substring(0, fimMensagem);
-            mensagemNormalizada = mensagemNormalizada.substring(fimMensagem);
-            mensagens.push(mensagemCompleta);
+            const mensagemCompleta = mensagemNormalizada.substring(posicaoInicial, fimMensagem);
+            const mensagemBruta = mensagem.substring(posicaoInicial, fimMensagem);
+            posicaoInicial = fimMensagem;
+            mensagens.push(this.criarMensagemSeparada(mensagemCompleta, mensagemBruta));
         }
         if (mensagens.length === 0) {
-            mensagens.push(mensagemNormalizada);
+            mensagens.push(this.criarMensagemSeparada(mensagemNormalizada, mensagem));
         }
         return mensagens;
     }
@@ -121,6 +130,12 @@ class SepararMensagens {
     }
     removerQuebrasDeLinha(mensagem) {
         return mensagem.replace(/(\r\n|\n|\r)/gm, '');
+    }
+    criarMensagemSeparada(mensagem, mensagemBruta) {
+        return {
+            mensagem,
+            mensagemBruta,
+        };
     }
 }
 exports.SepararMensagens = SepararMensagens;

@@ -1,7 +1,7 @@
 import { WritePacket, PacketId, IncomingEvent, Server, BaseRpcContext } from '@nestjs/microservices';
 import { CustomTransportStrategy, IncomingRequest } from '@nestjs/microservices';
 import { IServidorTCPConfig, ISocket } from '../../contracts';
-import { SepararMensagens } from './separar-mensagens';
+import { SepararMensagens, type MensagemSeparada } from './separar-mensagens';
 import { StringDecoder } from 'node:string_decoder';
 import { TcpContext } from '../ctx-host';
 import { Pattern } from '../../enums';
@@ -112,21 +112,26 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    */
   private mensagem(socket: ISocket): void {
     socket.on('data', (message: Buffer) => void (async () => {
-      for (const resposta of this.separarMensagens(message)) {
-        const tcpContexto  = new TcpContext([socket, resposta, (imei: string) => ServidorTcp.obterConexao(imei)]);
-        const msgFormatada = await this.deserializer.deserialize(resposta);
+      for (const resposta of this.separarMensagensComBruto(message)) {
+        const tcpContexto  = new TcpContext([
+          socket,
+          resposta.mensagem,
+          (imei: string) => ServidorTcp.obterConexao(imei),
+          resposta.mensagemBruta,
+        ]);
+        const msgFormatada = await this.deserializer.deserialize(resposta.mensagem);
         const consumidor   = this.getHandlerByPattern(msgFormatada.pattern as string);
 
         if (consumidor === null) {
           const erro = 'Não há um consumidor para a mensagem';
           this.configuracao.tratarErro.error(
-            `Class ServidorTcp ${erro} ${resposta}`,
+            `Class ServidorTcp ${erro} ${resposta.mensagem}`,
           );
 
           continue;
         }
 
-        this.salvarConexao(socket, resposta);
+        this.salvarConexao(socket, resposta.mensagem);
         if (consumidor.isEventHandler === true) {
           await this.eventPattern(tcpContexto, msgFormatada);
         } else {
@@ -165,7 +170,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * @return {Promise<void>}
    */
   private async eventPattern(tcpContexto: TcpContext, evento: IncomingEvent): Promise<void> {
-    await this.handleEvent(evento.pattern, evento, tcpContexto);
+    await this.handleEvent(evento.pattern as string, evento, tcpContexto);
   }
 
   /**
@@ -327,11 +332,20 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * @return {string[]}
   */
   public separarMensagens(mensagem: Buffer): string[] {
+    return this.separarMensagensComBruto(mensagem)
+      .map((mensagemSeparada: MensagemSeparada): string => mensagemSeparada.mensagem);
+  }
+
+  /**
+   * @param {Buffer} mensagem
+   * @return {MensagemSeparada[]}
+  */
+  private separarMensagensComBruto(mensagem: Buffer): MensagemSeparada[] {
     // Mensagens enviadas por uma aplicação Nest
     let mensagemString = this.stringDecoder.write(mensagem);
     const quantidadeMenagem = (mensagemString.match(/\d+#{/g) ?? []).length;
     if (quantidadeMenagem > 0) {
-      const arrayMensagens: string[] = [];
+      const arrayMensagens: MensagemSeparada[] = [];
 
       for (let _i = 0; _i < quantidadeMenagem; _i++) {
         const posicaoDelimitador = mensagemString.indexOf('#');
@@ -339,7 +353,11 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
         const tamanhoMensagem    = parseInt(mensagemString.substring(0, posicaoDelimitador), 10);
 
         if (!isNaN(tamanhoMensagem)) {
-          arrayMensagens.push(msgSemDelimidador.substring(0, tamanhoMensagem));
+          const mensagemSeparada = msgSemDelimidador.substring(0, tamanhoMensagem);
+          arrayMensagens.push({
+            mensagem     : mensagemSeparada,
+            mensagemBruta: mensagemSeparada,
+          });
           mensagemString = msgSemDelimidador.substring(tamanhoMensagem);
         }
       }
@@ -351,6 +369,6 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
     const codificacao = this.configuracao.codificacaoMsg;
     const demaisMsg   = mensagem.toString(codificacao);
 
-    return this.separarMsgs.obterMensagens(demaisMsg);
+    return this.separarMsgs.obterMensagensComBruto(demaisMsg);
   }
 }

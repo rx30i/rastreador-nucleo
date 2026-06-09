@@ -25,4 +25,5 @@ export declare class ServidorTcp extends Server implements CustomTransportStrate
     private formatarResposta;
     private qtdDispositivosConectados;
     separarMensagens(mensagem: Buffer): string[];
+    private separarMensagensComBruto;
 }

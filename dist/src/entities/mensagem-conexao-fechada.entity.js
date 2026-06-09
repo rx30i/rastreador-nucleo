@@ -17,7 +17,12 @@ class MensagemConexaoFechadaEntity {
         this.online = false;
     }
     obterObjeto() {
-        return { ...this };
+        return {
+            dataHora: this.dataHora,
+            imei: this.imei,
+            integracao: this.integracao,
+            pattern: this.pattern,
+        };
     }
     validar() {
         if (!this.dataHora) {

@@ -3,18 +3,15 @@ import { ISocket } from '../../contracts';
 import { Socket } from 'net';
 
 /**
- * Socket   => Conexão do cliente proprietário da mensagem autal.
- * string   => Menagem original recebida pelo servidor TCP, a única alteração feita é a conversão de Buffer para string.
- * Function => Recebe o imei do cliente e verifica em uma lista de conexões se o proprietario daquele imei está
+ * Socket   => Conexao do cliente proprietario da mensagem atual.
+ * string   => Mensagem usada pelo transporte apos as normalizacoes atuais.
+ * Function => Recebe o imei do cliente e verifica em uma lista de conexoes se o proprietario daquele imei esta
  *  conectado, retorna a conexao ou null.
+ * string   => Mensagem bruta recebida do socket para este contexto.
  */
-declare type TcpContextArgs = [Socket, string, (imei: string) => ISocket | null];
+declare type TcpContextArgs = [Socket, string, (imei: string) => ISocket | null, string?];
 
 export class TcpContext extends BaseRpcContext<TcpContextArgs> {
-  constructor(args: TcpContextArgs) {
-    super(args);
-  }
-
   public getSocketRef(imei?: string): ISocket | null {
     if (imei) {
       return this.args[2](imei);
@@ -24,10 +21,18 @@ export class TcpContext extends BaseRpcContext<TcpContextArgs> {
   }
 
   /**
-   * Corresponde a mensagem original, a mensagem recebida pelo servidor TCP.
+   * Corresponde a mensagem usada pelo transporte, mantendo o comportamento historico de normalizacao.
    * @return {string}
    */
   public mensagem(): string {
     return this.args[1];
+  }
+
+  /**
+   * Corresponde ao trecho bruto recebido do socket para esta mensagem.
+   * @return {string}
+   */
+  public mensagemBruta(): string {
+    return this.args[3] ?? this.mensagem();
   }
 }

@@ -10,17 +10,17 @@ describe('MensagemConexaoFechadaEntity', () => {
     entidade02 = new MensagemConexaoFechadaEntity('', '', '');
   });
 
-  describe('Método validar', () => {
-    it('A entidade recebeu um objeto valido, deve ser retornado "undefined"', () => {
-      expect(entidade01.validar()).toEqual(undefined);
+  describe('Metodo validar', () => {
+    it('A entidade recebeu um objeto valido, nao deve emitir erro', () => {
+      expect((): void => {
+        entidade01.validar();
+      }).not.toThrow();
     });
 
     it('A entidade recebeu um objeto invalido, deve emitir um erro "HttpException"', () => {
-      try {
-        entidade01.validar();
-      } catch (erro) {
-        expect(erro).toBeInstanceOf(HttpException);
-      }
+      expect((): void => {
+        entidade02.validar();
+      }).toThrow(HttpException);
     });
   });
 
@@ -55,7 +55,7 @@ describe('MensagemConexaoFechadaEntity', () => {
       expect(entidade02.integracao).toEqual('');
     });
 
-    it('Deve retornar uma string cujo o valor é "coban303"', () => {
+    it('Deve retornar uma string cujo o valor e "coban303"', () => {
       expect(entidade01.integracao).toEqual('coban303');
     });
   });
