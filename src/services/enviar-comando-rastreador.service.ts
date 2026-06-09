@@ -74,7 +74,7 @@ export class EnviarComandoRastreadorService {
 
     await this.channel.consume(filaComandos, (mensagem: ConsumeMessage | null) => {
       if (mensagem != null) {
-        this.logger.local('COMANDO CRIADO:', mensagem.content.toString('ascii'));
+        this.logger.debug(mensagem.content.toString('ascii'), 'COMANDO CRIADO');
         callback(mensagem);
       }
     });
@@ -104,6 +104,7 @@ export class EnviarComandoRastreadorService {
       const socket   = ServidorTcp.obterConexao(comandoEntity.imei);
       const resposta = socket?.write(comando);
       if (resposta === true) {
+        this.registrarComandoEnviadoAoRastreador(comandoEntity, comando);
         this.finalizarMsg(resposta, mensagem, comandoEntity);
         return undefined;
       }
@@ -115,6 +116,14 @@ export class EnviarComandoRastreadorService {
       this.naoPodeSerEnviada(false, mensagem, comandoEntity);
       this.logger.error(erro);
     }
+  }
+
+  private registrarComandoEnviadoAoRastreador(comandoEntity: ComandoUsuarioEntity, comando: Buffer): void {
+    this.logger.mensagemRastreador(
+      comandoEntity.imei,
+      comando.toString('ascii'),
+      'enviada',
+    );
   }
 
   /**
@@ -205,7 +214,7 @@ export class EnviarComandoRastreadorService {
       identificador: comando.identificador,
     });
 
-    this.logger.local('COMANDO STATUS:', resposta.json());
+    this.logger.debug(resposta.json(), 'COMANDO STATUS');
     resposta.validar();
     this.obterCanal().publish(
       'amq.direct',

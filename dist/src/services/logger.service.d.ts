@@ -1,10 +1,28 @@
 import { ConsoleLogger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { type SentidoMensagemRastreador } from '../contracts';
 export declare class LoggerService extends ConsoleLogger {
     private readonly configService;
+    private readonly loggersRastreador;
+    private readonly diretorioLogsRastreador;
     constructor(configService: ConfigService);
+    debug(mensagem: unknown, ...parametrosOpcionais: unknown[]): undefined;
+    mensagemRastreador(imeiRastreador: string, mensagem: unknown, sentidoMensagem: SentidoMensagemRastreador): undefined;
     local2(mensagem: unknown, prefixo?: string): undefined;
     capiturarError(erro: unknown): undefined;
+    private aplicacaoEstaEmModoDesenvolvimento;
+    private aplicacaoNaoEstaEmProducao;
+    private obterImeiConfiguradoParaSalvarLog;
+    private normalizarTexto;
+    private obterPrefixo;
+    private obterLoggerRastreador;
+    private criarLoggerRastreador;
+    private criarFormatoLoggerRastreador;
+    private obterNomeArquivoLogRastreador;
+    private sanitizarImeiParaNomeArquivo;
+    private formatarLinhaMensagemRastreador;
+    private converterMensagemRastreadorParaTexto;
+    private removerQuebrasDeLinha;
     private formatarMensagem;
     private normalizarErro;
     private serializarValor;

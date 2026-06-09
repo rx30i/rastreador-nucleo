@@ -13,6 +13,7 @@ export declare class EnviarComandoRastreadorService {
     private obterCanal;
     receberMsgRabbitMq(callback: (mensagem: ConsumeMessage) => void): Promise<void>;
     enviarComando(mensagem: ConsumeMessage, comando: Buffer): undefined;
+    private registrarComandoEnviadoAoRastreador;
     private finalizarMsg;
     private rejeitarMsg;
     private naoPodeSerEnviada;

@@ -152,7 +152,7 @@ export class ReceberMsgQtdDispositivosConectadosController {
 
   @EventPattern(Pattern.QTD_DISPOSITIVOS_CONECTADOS)
   public async receber (@Payload() mensagem: string): Promise<void> {
-    this.loggerService.local('INTEGRAÇÃO', mensagem);
+    this.loggerService.debug(mensagem, 'INTEGRAÇÃO');
   }
 }
 ```

@@ -5,13 +5,15 @@ describe('ComandoUsuarioEntity', () => {
   let comandoUsuarioEntity02: ComandoUsuarioEntity;
 
   beforeEach(() => {
+    const valorIndefinido = undefined as unknown as string;
+
     comandoUsuarioEntity01 = new ComandoUsuarioEntity({
-      _id             : undefined,
-      modeloRastreador: undefined,
-      integracao      : undefined,
-      identificador   : undefined,
-      comando         : undefined,
-      imei            : undefined,
+      _id             : valorIndefinido,
+      modeloRastreador: valorIndefinido,
+      integracao      : valorIndefinido,
+      identificador   : valorIndefinido,
+      comando         : valorIndefinido,
+      imei            : valorIndefinido,
     });
 
     comandoUsuarioEntity02 = new ComandoUsuarioEntity({

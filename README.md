@@ -19,6 +19,8 @@ Contem recursos usados nas integrações dos rastreadores
 
 [Envio de comandos](/docs/enviar-comandos.md)
 
+[LoggerService](/docs/logger-service.md)
+
 [Declarar filas](/docs/declarar-filas-rabbitmq.md)
 
 [Salvar mensagem repository](/docs/salvar-msg.repository.md)

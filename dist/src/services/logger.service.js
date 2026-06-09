@@ -41,30 +41,136 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoggerService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+const winston_daily_rotate_file_1 = __importDefault(require("winston-daily-rotate-file"));
 const Sentry = __importStar(require("@sentry/node"));
+const Winston = __importStar(require("winston"));
+const FileSystem = __importStar(require("node:fs"));
+const Path = __importStar(require("node:path"));
 let LoggerService = class LoggerService extends common_1.ConsoleLogger {
     configService;
+    loggersRastreador = new Map();
+    diretorioLogsRastreador = 'logs';
     constructor(configService) {
         super('LoggerService');
         this.configService = configService;
     }
+    debug(mensagem, ...parametrosOpcionais) {
+        if (!this.aplicacaoEstaEmModoDesenvolvimento()) {
+            return undefined;
+        }
+        const prefixo = this.obterPrefixo(parametrosOpcionais);
+        const mensagemFormatada = this.formatarMensagem(mensagem, prefixo);
+        super.debug(mensagemFormatada, this.context);
+        return undefined;
+    }
+    mensagemRastreador(imeiRastreador, mensagem, sentidoMensagem) {
+        const imeiConfigurado = this.obterImeiConfiguradoParaSalvarLog();
+        const imeiNormalizado = this.normalizarTexto(imeiRastreador);
+        if (!imeiConfigurado || imeiConfigurado !== imeiNormalizado) {
+            return undefined;
+        }
+        const loggerRastreador = this.obterLoggerRastreador(imeiNormalizado);
+        loggerRastreador.info(this.formatarLinhaMensagemRastreador(imeiNormalizado, mensagem, sentidoMensagem));
+        return undefined;
+    }
     local2(mensagem, prefixo) {
-        if (this.configService.get('APP_ENV') !== 'producao') {
+        if (this.aplicacaoNaoEstaEmProducao()) {
             const mensagemFormatada = this.formatarMensagem(mensagem, prefixo);
             super.log(mensagemFormatada, this.context);
         }
     }
     capiturarError(erro) {
         const erroNormalizado = this.normalizarErro(erro);
-        if (this.configService.get('APP_ENV') !== 'producao') {
+        if (this.aplicacaoNaoEstaEmProducao()) {
             super.error(erroNormalizado);
             return;
         }
         Sentry.captureException(erroNormalizado);
+    }
+    aplicacaoEstaEmModoDesenvolvimento() {
+        return this.configService.get('APP_ENV') === 'desenvolvimento';
+    }
+    aplicacaoNaoEstaEmProducao() {
+        return this.configService.get('APP_ENV') !== 'producao';
+    }
+    obterImeiConfiguradoParaSalvarLog() {
+        const imeiConfigurado = this.configService.get('SALVAR_LOG_RASTREADOR_IMEI');
+        return this.normalizarTexto(imeiConfigurado);
+    }
+    normalizarTexto(valor) {
+        return valor?.trim() ?? '';
+    }
+    obterPrefixo(parametrosOpcionais) {
+        const primeiroParametro = parametrosOpcionais[0];
+        if (typeof primeiroParametro !== 'string') {
+            return undefined;
+        }
+        return primeiroParametro;
+    }
+    obterLoggerRastreador(imeiRastreador) {
+        const nomeArquivo = this.obterNomeArquivoLogRastreador(imeiRastreador);
+        const loggerExistente = this.loggersRastreador.get(nomeArquivo);
+        if (loggerExistente !== undefined) {
+            return loggerExistente;
+        }
+        const loggerCriado = this.criarLoggerRastreador(nomeArquivo);
+        this.loggersRastreador.set(nomeArquivo, loggerCriado);
+        return loggerCriado;
+    }
+    criarLoggerRastreador(nomeArquivo) {
+        FileSystem.mkdirSync(this.diretorioLogsRastreador, { recursive: true });
+        return Winston.createLogger({
+            level: 'info',
+            format: this.criarFormatoLoggerRastreador(),
+            transports: [
+                new winston_daily_rotate_file_1.default({
+                    filename: nomeArquivo,
+                    datePattern: 'YYYY-MM-DD',
+                    level: 'info',
+                }),
+            ],
+        });
+    }
+    criarFormatoLoggerRastreador() {
+        return Winston.format.printf((informacoes) => this.converterValorParaTexto(informacoes.message));
+    }
+    obterNomeArquivoLogRastreador(imeiRastreador) {
+        const imeiSanitizado = this.sanitizarImeiParaNomeArquivo(imeiRastreador);
+        return Path.posix.join(this.diretorioLogsRastreador, `log-${imeiSanitizado}-%DATE%.log`);
+    }
+    sanitizarImeiParaNomeArquivo(imeiRastreador) {
+        const imeiSanitizado = imeiRastreador.replace(/[^a-zA-Z0-9_-]/g, '_');
+        if (imeiSanitizado.length === 0) {
+            return 'sem-imei';
+        }
+        return imeiSanitizado;
+    }
+    formatarLinhaMensagemRastreador(imeiRastreador, mensagem, sentidoMensagem) {
+        const dataHora = new Date().toISOString();
+        const mensagemTexto = this.converterMensagemRastreadorParaTexto(mensagem);
+        return `[${dataHora}] [${imeiRastreador}] [${sentidoMensagem}] ${mensagemTexto}`;
+    }
+    converterMensagemRastreadorParaTexto(mensagem) {
+        if (mensagem instanceof Error) {
+            return this.removerQuebrasDeLinha(mensagem.stack ?? mensagem.message);
+        }
+        if (typeof mensagem === 'string') {
+            return this.removerQuebrasDeLinha(mensagem);
+        }
+        if (this.valorEhObjetoComum(mensagem)) {
+            return this.removerQuebrasDeLinha(this.serializarValor(mensagem));
+        }
+        return this.removerQuebrasDeLinha(this.converterValorParaTexto(mensagem));
+    }
+    removerQuebrasDeLinha(valor) {
+        return valor.replace(/(\r\n|\n|\r)/gm, '\\n');
     }
     formatarMensagem(mensagem, prefixo) {
         if (!prefixo) {

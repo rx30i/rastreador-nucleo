@@ -36,7 +36,7 @@ class EnviarComandoRastreadorService {
         })());
         await this.channel.consume(filaComandos, (mensagem) => {
             if (mensagem != null) {
-                this.logger.local('COMANDO CRIADO:', mensagem.content.toString('ascii'));
+                this.logger.debug(mensagem.content.toString('ascii'), 'COMANDO CRIADO');
                 callback(mensagem);
             }
         });
@@ -53,6 +53,7 @@ class EnviarComandoRastreadorService {
             const socket = transport_1.ServidorTcp.obterConexao(comandoEntity.imei);
             const resposta = socket?.write(comando);
             if (resposta === true) {
+                this.registrarComandoEnviadoAoRastreador(comandoEntity, comando);
                 this.finalizarMsg(resposta, mensagem, comandoEntity);
                 return undefined;
             }
@@ -64,6 +65,9 @@ class EnviarComandoRastreadorService {
             this.naoPodeSerEnviada(false, mensagem, comandoEntity);
             this.logger.error(erro);
         }
+    }
+    registrarComandoEnviadoAoRastreador(comandoEntity, comando) {
+        this.logger.mensagemRastreador(comandoEntity.imei, comando.toString('ascii'), 'enviada');
     }
     finalizarMsg(msgEnviada, rabbitMqMsg, comando) {
         if (msgEnviada) {
@@ -103,7 +107,7 @@ class EnviarComandoRastreadorService {
             status: statusResposta,
             identificador: comando.identificador,
         });
-        this.logger.local('COMANDO STATUS:', resposta.json());
+        this.logger.debug(resposta.json(), 'COMANDO STATUS');
         resposta.validar();
         this.obterCanal().publish('amq.direct', 'rastreador.mensagem', Buffer.from(resposta.json(), 'ascii'));
     }
