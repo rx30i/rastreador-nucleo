@@ -1,4 +1,4 @@
-import { Injectable as injectable, ConsoleLogger } from '@nestjs/common';
+import { Injectable, ConsoleLogger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type SentidoMensagemRastreador } from '../contracts';
 import DailyRotateFile from 'winston-daily-rotate-file';
@@ -8,7 +8,7 @@ import * as FileSystem from 'node:fs';
 import * as Path from 'node:path';
 
 
-@injectable()
+@Injectable()
 export class LoggerService extends ConsoleLogger {
   private readonly loggersRastreador: Map<string, Winston.Logger> = new Map<string, Winston.Logger>();
   private readonly diretorioLogsRastreador: string = 'logs';
@@ -44,10 +44,14 @@ export class LoggerService extends ConsoleLogger {
       return undefined;
     }
 
-    const loggerRastreador: Winston.Logger = this.obterLoggerRastreador(imeiNormalizado);
-    loggerRastreador.info(
-      this.formatarLinhaMensagemRastreador(imeiNormalizado, mensagem, sentidoMensagem),
-    );
+    try {
+      const loggerRastreador: Winston.Logger = this.obterLoggerRastreador(imeiNormalizado);
+      loggerRastreador.info(
+        this.formatarLinhaMensagemRastreador(imeiNormalizado, mensagem, sentidoMensagem),
+      );
+    } catch (erro: unknown) {
+      this.capiturarError(erro);
+    }
 
     return undefined;
   }
@@ -77,7 +81,7 @@ export class LoggerService extends ConsoleLogger {
     const erroNormalizado: Error = this.normalizarErro(erro);
 
     if (this.aplicacaoNaoEstaEmProducao()) {
-      super.error(erroNormalizado);
+      super.error(erroNormalizado.message, erroNormalizado.stack, this.context);
       return;
     }
 

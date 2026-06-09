@@ -24,12 +24,15 @@ jest.mock('winston', () => ({
 
 describe('LoggerService', () => {
   let debugConsole: jest.SpyInstance;
+  let erroConsole: jest.SpyInstance;
   let registrarInformacao: jest.Mock<undefined, [string]>;
 
   beforeEach((): void => {
     jest.clearAllMocks();
 
     debugConsole = jest.spyOn(ConsoleLogger.prototype, 'debug')
+      .mockImplementation((): void => undefined);
+    erroConsole = jest.spyOn(ConsoleLogger.prototype, 'error')
       .mockImplementation((): void => undefined);
 
     registrarInformacao = jest.fn<undefined, [string]>(() => undefined);
@@ -40,6 +43,7 @@ describe('LoggerService', () => {
 
   afterEach((): void => {
     debugConsole.mockRestore();
+    erroConsole.mockRestore();
   });
 
   it('deve exibir debug quando a aplicacao estiver em desenvolvimento', (): void => {
@@ -60,6 +64,17 @@ describe('LoggerService', () => {
     logger.debug('mensagem de teste', 'PREFIXO');
 
     expect(debugConsole).not.toHaveBeenCalled();
+  });
+
+  it('deve registrar erro local com mensagem, stack e contexto quando nao estiver em producao', (): void => {
+    const logger: LoggerService = criarLoggerService({
+      APP_ENV: 'desenvolvimento',
+    });
+    const erro: Error = new Error('falha capturada');
+
+    logger.capiturarError(erro);
+
+    expect(erroConsole).toHaveBeenCalledWith('falha capturada', erro.stack, 'LoggerService');
   });
 
   it('nao deve configurar logger de rastreador quando a variavel de IMEI estiver vazia', (): void => {
@@ -102,6 +117,26 @@ describe('LoggerService', () => {
     const primeiraMensagemRegistrada: string = registrarInformacao.mock.calls[0][0];
     expect(primeiraMensagemRegistrada).toMatch(
       /^\[\d{4}-\d{2}-\d{2}T.*\] \[123\/456\] \[recebida\] mensagem recebida$/,
+    );
+  });
+
+  it('nao deve propagar erro quando o logger de rastreador nao puder ser criado', (): void => {
+    const logger: LoggerService = criarLoggerService({
+      APP_ENV                   : 'desenvolvimento',
+      SALVAR_LOG_RASTREADOR_IMEI: '123456789012345',
+    });
+    const erro: Error = new Error('sem permissao para criar diretorio');
+    (FileSystem.mkdirSync as jest.Mock).mockImplementationOnce((): never => {
+      throw erro;
+    });
+
+    expect((): undefined => {
+      logger.mensagemRastreador('123456789012345', 'mensagem recebida', 'recebida');
+    }).not.toThrow();
+    expect(erroConsole).toHaveBeenCalledWith(
+      'sem permissao para criar diretorio',
+      erro.stack,
+      'LoggerService',
     );
   });
 });

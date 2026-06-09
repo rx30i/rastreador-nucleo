@@ -76,8 +76,13 @@ let LoggerService = class LoggerService extends common_1.ConsoleLogger {
         if (!imeiConfigurado || imeiConfigurado !== imeiNormalizado) {
             return undefined;
         }
-        const loggerRastreador = this.obterLoggerRastreador(imeiNormalizado);
-        loggerRastreador.info(this.formatarLinhaMensagemRastreador(imeiNormalizado, mensagem, sentidoMensagem));
+        try {
+            const loggerRastreador = this.obterLoggerRastreador(imeiNormalizado);
+            loggerRastreador.info(this.formatarLinhaMensagemRastreador(imeiNormalizado, mensagem, sentidoMensagem));
+        }
+        catch (erro) {
+            this.capiturarError(erro);
+        }
         return undefined;
     }
     local2(mensagem, prefixo) {
@@ -89,7 +94,7 @@ let LoggerService = class LoggerService extends common_1.ConsoleLogger {
     capiturarError(erro) {
         const erroNormalizado = this.normalizarErro(erro);
         if (this.aplicacaoNaoEstaEmProducao()) {
-            super.error(erroNormalizado);
+            super.error(erroNormalizado.message, erroNormalizado.stack, this.context);
             return;
         }
         Sentry.captureException(erroNormalizado);

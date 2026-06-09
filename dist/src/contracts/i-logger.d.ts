@@ -1,8 +1,7 @@
-import { LoggerService } from '@nestjs/common';
 export type SentidoMensagemRastreador = 'recebida' | 'enviada';
-export interface ILoger extends LoggerService {
+export interface ILoger {
     debug(mensagem: unknown, ...parametrosOpcionais: unknown[]): undefined;
+    error(mensagem: unknown, ...parametrosOpcionais: unknown[]): void;
     local2(mensagem: unknown, prefixo?: string): undefined;
     mensagemRastreador(imeiRastreador: string, mensagem: unknown, sentidoMensagem: SentidoMensagemRastreador): undefined;
-    capiturarException(erro: Error, context?: unknown): void;
 }
