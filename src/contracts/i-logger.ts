@@ -10,9 +10,9 @@ export interface ILoger {
    */
   local2(mensagem: unknown, prefixo?: string): undefined;
 
-  mensagemRastreador(
+  salvarLogRastreador(
     imeiRastreador: string,
-    mensagem: unknown,
+    mensagemBruta: unknown,
     sentidoMensagem: SentidoMensagemRastreador,
   ): undefined;
 }

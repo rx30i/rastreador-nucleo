@@ -16,7 +16,7 @@ O pacote `rastreador-nucleo` declara essas bibliotecas como `peerDependencies`, 
 
 | Variavel | Descricao |
 |----------|-----------|
-| `APP_ENV=desenvolvimento` | Habilita a exibicao de logs chamados por `debug`. |
+| `APP_ENV=desenvolvimento` | Habilita a exibicao de logs chamados por `debug` e das mensagens brutas do rastreador. |
 | `SALVAR_LOG_RASTREADOR_IMEI` | Quando preenchida, habilita a gravacao manual das mensagens do IMEI informado. |
 
 ## `debug(mensagem, prefixo?)`
@@ -29,20 +29,22 @@ this.loggerService.debug('Comando recebido da fila', 'COMANDO');
 
 O metodo `local2` continua existindo para compatibilidade, mas esta depreciado e deve ser substituido por `debug` em novas implementacoes.
 
-## `mensagemRastreador(imeiRastreador, mensagem, sentidoMensagem)`
+## `salvarLogRastreador(imeiRastreador, mensagemBruta, sentidoMensagem)`
 
 Grava mensagens de um rastreador especifico em arquivo apenas quando `SALVAR_LOG_RASTREADOR_IMEI` estiver preenchida e corresponder ao IMEI recebido como primeiro parametro.
+
+Quando `APP_ENV` for igual a `desenvolvimento`, a mensagem bruta tambem e exibida no terminal no formato `RASTREADOR: mensagemBruta`. Essa exibicao usa o `ConsoleLogger`; o `Winston.Logger` continua restrito ao arquivo.
 
 Esse metodo nao captura trafego automaticamente. O controller, service ou repository decide quando chamar o metodo.
 
 ```typescript
-this.loggerService.mensagemRastreador(
+this.loggerService.salvarLogRastreador(
   '123456789012345',
   '78780d010812345678901234500010d0a',
   'recebida',
 );
 
-this.loggerService.mensagemRastreador(
+this.loggerService.salvarLogRastreador(
   '123456789012345',
   'ST300CMD;123456789012345;02;Enable1',
   'enviada',

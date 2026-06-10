@@ -32,11 +32,13 @@ export class LoggerService extends ConsoleLogger {
     return undefined;
   }
 
-  public mensagemRastreador(
+  public salvarLogRastreador(
     imeiRastreador: string,
-    mensagem: unknown,
+    mensagemBruta: unknown,
     sentidoMensagem: SentidoMensagemRastreador,
   ): undefined {
+    this.exibirMensagemRastreadorEmDesenvolvimento(mensagemBruta);
+
     const imeiConfigurado: string = this.obterImeiConfiguradoParaSalvarLog();
     const imeiNormalizado: string = this.normalizarTexto(imeiRastreador);
 
@@ -47,7 +49,7 @@ export class LoggerService extends ConsoleLogger {
     try {
       const loggerRastreador: Winston.Logger = this.obterLoggerRastreador(imeiNormalizado);
       loggerRastreador.info(
-        this.formatarLinhaMensagemRastreador(imeiNormalizado, mensagem, sentidoMensagem),
+        this.formatarLinhaMensagemRastreador(imeiNormalizado, mensagemBruta, sentidoMensagem),
       );
     } catch (erro: unknown) {
       this.capiturarError(erro);
@@ -128,6 +130,22 @@ export class LoggerService extends ConsoleLogger {
     this.loggersRastreador.set(nomeArquivo, loggerCriado);
 
     return loggerCriado;
+  }
+
+  private exibirMensagemRastreadorEmDesenvolvimento(mensagemBruta: unknown): undefined {
+    if (!this.aplicacaoEstaEmModoDesenvolvimento()) {
+      return undefined;
+    }
+
+    const mensagemFormatada: string = this.formatarMensagemBrutaRastreador(mensagemBruta);
+
+    super.debug(mensagemFormatada, this.context);
+
+    return undefined;
+  }
+
+  private formatarMensagemBrutaRastreador(mensagemBruta: unknown): string {
+    return `RASTREADOR: ${this.converterValorParaTexto(mensagemBruta)}`;
   }
 
   private criarLoggerRastreador(nomeArquivo: string): Winston.Logger {

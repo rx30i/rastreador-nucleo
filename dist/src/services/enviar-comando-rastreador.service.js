@@ -67,7 +67,7 @@ class EnviarComandoRastreadorService {
         }
     }
     registrarComandoEnviadoAoRastreador(comandoEntity, comando) {
-        this.logger.mensagemRastreador(comandoEntity.imei, comando.toString('ascii'), 'enviada');
+        this.logger.salvarLogRastreador(comandoEntity.imei, comando.toString('ascii'), 'enviada');
     }
     finalizarMsg(msgEnviada, rabbitMqMsg, comando) {
         if (msgEnviada) {

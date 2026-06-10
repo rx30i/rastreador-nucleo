@@ -22,9 +22,12 @@ jest.mock('winston', () => ({
   },
 }));
 
+type ChamadaConsoleDebug = [unknown, ...unknown[]];
+type ChamadaConsoleErro = [unknown, unknown?, ...unknown[]];
+
 describe('LoggerService', () => {
-  let debugConsole: jest.SpyInstance;
-  let erroConsole: jest.SpyInstance;
+  let debugConsole: jest.SpyInstance<void, ChamadaConsoleDebug>;
+  let erroConsole: jest.SpyInstance<void, ChamadaConsoleErro>;
   let registrarInformacao: jest.Mock<undefined, [string]>;
 
   beforeEach((): void => {
@@ -82,10 +85,35 @@ describe('LoggerService', () => {
       SALVAR_LOG_RASTREADOR_IMEI: '',
     });
 
-    logger.mensagemRastreador('123456789012345', 'mensagem recebida', 'recebida');
+    logger.salvarLogRastreador('123456789012345', 'mensagem recebida', 'recebida');
 
     expect(Winston.createLogger).not.toHaveBeenCalled();
     expect(DailyRotateFile).not.toHaveBeenCalled();
+  });
+
+  it('deve exibir mensagem de rastreador em desenvolvimento quando a variavel de IMEI estiver vazia', (): void => {
+    const logger: LoggerService = criarLoggerService({
+      APP_ENV                   : 'desenvolvimento',
+      SALVAR_LOG_RASTREADOR_IMEI: '',
+    });
+
+    logger.salvarLogRastreador('123456789012345', 'mensagem recebida', 'recebida');
+
+    expect(Winston.createLogger).not.toHaveBeenCalled();
+    expect(DailyRotateFile).not.toHaveBeenCalled();
+    expect(debugConsole).toHaveBeenCalledTimes(1);
+    expect(debugConsole).toHaveBeenCalledWith('RASTREADOR: mensagem recebida', 'LoggerService');
+  });
+
+  it('nao deve exibir mensagem de rastreador em producao', (): void => {
+    const logger: LoggerService = criarLoggerService({
+      APP_ENV                   : 'producao',
+      SALVAR_LOG_RASTREADOR_IMEI: '',
+    });
+
+    logger.salvarLogRastreador('123456789012345', 'mensagem recebida', 'recebida');
+
+    expect(debugConsole).not.toHaveBeenCalled();
   });
 
   it('nao deve gravar mensagem de rastreador quando o IMEI nao corresponder ao configurado', (): void => {
@@ -93,18 +121,35 @@ describe('LoggerService', () => {
       SALVAR_LOG_RASTREADOR_IMEI: '123456789012345',
     });
 
-    logger.mensagemRastreador('999999999999999', 'mensagem recebida', 'recebida');
+    logger.salvarLogRastreador('999999999999999', 'mensagem recebida', 'recebida');
 
     expect(Winston.createLogger).not.toHaveBeenCalled();
     expect(DailyRotateFile).not.toHaveBeenCalled();
   });
+
+  it(
+    'deve exibir mensagem de rastreador em desenvolvimento quando o IMEI nao corresponder ao configurado',
+    (): void => {
+      const logger: LoggerService = criarLoggerService({
+        APP_ENV                   : 'desenvolvimento',
+        SALVAR_LOG_RASTREADOR_IMEI: '123456789012345',
+      });
+
+      logger.salvarLogRastreador('999999999999999', 'mensagem recebida', 'recebida');
+
+      expect(Winston.createLogger).not.toHaveBeenCalled();
+      expect(DailyRotateFile).not.toHaveBeenCalled();
+      expect(debugConsole).toHaveBeenCalledTimes(1);
+      expect(debugConsole).toHaveBeenCalledWith('RASTREADOR: mensagem recebida', 'LoggerService');
+    },
+  );
 
   it('deve configurar arquivo rotacionado e gravar mensagem quando o IMEI corresponder ao configurado', (): void => {
     const logger: LoggerService = criarLoggerService({
       SALVAR_LOG_RASTREADOR_IMEI: '123/456',
     });
 
-    logger.mensagemRastreador('123/456', 'mensagem recebida', 'recebida');
+    logger.salvarLogRastreador('123/456', 'mensagem recebida', 'recebida');
 
     expect(FileSystem.mkdirSync).toHaveBeenCalledWith('logs', { recursive: true });
     expect(DailyRotateFile).toHaveBeenCalledWith({
@@ -120,6 +165,18 @@ describe('LoggerService', () => {
     );
   });
 
+  it('deve exibir terminal e gravar arquivo quando o IMEI corresponder em desenvolvimento', (): void => {
+    const logger: LoggerService = criarLoggerService({
+      APP_ENV                   : 'desenvolvimento',
+      SALVAR_LOG_RASTREADOR_IMEI: '123456789012345',
+    });
+
+    logger.salvarLogRastreador('123456789012345', 'mensagem recebida', 'recebida');
+
+    expect(debugConsole).toHaveBeenCalledWith('RASTREADOR: mensagem recebida', 'LoggerService');
+    expect(registrarInformacao).toHaveBeenCalledTimes(1);
+  });
+
   it('nao deve propagar erro quando o logger de rastreador nao puder ser criado', (): void => {
     const logger: LoggerService = criarLoggerService({
       APP_ENV                   : 'desenvolvimento',
@@ -131,7 +188,7 @@ describe('LoggerService', () => {
     });
 
     expect((): undefined => {
-      logger.mensagemRastreador('123456789012345', 'mensagem recebida', 'recebida');
+      logger.salvarLogRastreador('123456789012345', 'mensagem recebida', 'recebida');
     }).not.toThrow();
     expect(erroConsole).toHaveBeenCalledWith(
       'sem permissao para criar diretorio',

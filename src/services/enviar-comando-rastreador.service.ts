@@ -119,7 +119,7 @@ export class EnviarComandoRastreadorService {
   }
 
   private registrarComandoEnviadoAoRastreador(comandoEntity: ComandoUsuarioEntity, comando: Buffer): void {
-    this.logger.mensagemRastreador(
+    this.logger.salvarLogRastreador(
       comandoEntity.imei,
       comando.toString('ascii'),
       'enviada',

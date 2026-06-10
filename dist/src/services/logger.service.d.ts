@@ -7,7 +7,7 @@ export declare class LoggerService extends ConsoleLogger {
     private readonly diretorioLogsRastreador;
     constructor(configService: ConfigService);
     debug(mensagem: unknown, ...parametrosOpcionais: unknown[]): undefined;
-    mensagemRastreador(imeiRastreador: string, mensagem: unknown, sentidoMensagem: SentidoMensagemRastreador): undefined;
+    salvarLogRastreador(imeiRastreador: string, mensagemBruta: unknown, sentidoMensagem: SentidoMensagemRastreador): undefined;
     local2(mensagem: unknown, prefixo?: string): undefined;
     capiturarError(erro: unknown): undefined;
     private aplicacaoEstaEmModoDesenvolvimento;
@@ -16,6 +16,8 @@ export declare class LoggerService extends ConsoleLogger {
     private normalizarTexto;
     private obterPrefixo;
     private obterLoggerRastreador;
+    private exibirMensagemRastreadorEmDesenvolvimento;
+    private formatarMensagemBrutaRastreador;
     private criarLoggerRastreador;
     private criarFormatoLoggerRastreador;
     private obterNomeArquivoLogRastreador;

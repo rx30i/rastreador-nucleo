@@ -70,7 +70,8 @@ let LoggerService = class LoggerService extends common_1.ConsoleLogger {
         super.debug(mensagemFormatada, this.context);
         return undefined;
     }
-    mensagemRastreador(imeiRastreador, mensagem, sentidoMensagem) {
+    salvarLogRastreador(imeiRastreador, mensagemBruta, sentidoMensagem) {
+        this.exibirMensagemRastreadorEmDesenvolvimento(mensagemBruta);
         const imeiConfigurado = this.obterImeiConfiguradoParaSalvarLog();
         const imeiNormalizado = this.normalizarTexto(imeiRastreador);
         if (!imeiConfigurado || imeiConfigurado !== imeiNormalizado) {
@@ -78,7 +79,7 @@ let LoggerService = class LoggerService extends common_1.ConsoleLogger {
         }
         try {
             const loggerRastreador = this.obterLoggerRastreador(imeiNormalizado);
-            loggerRastreador.info(this.formatarLinhaMensagemRastreador(imeiNormalizado, mensagem, sentidoMensagem));
+            loggerRastreador.info(this.formatarLinhaMensagemRastreador(imeiNormalizado, mensagemBruta, sentidoMensagem));
         }
         catch (erro) {
             this.capiturarError(erro);
@@ -128,6 +129,17 @@ let LoggerService = class LoggerService extends common_1.ConsoleLogger {
         const loggerCriado = this.criarLoggerRastreador(nomeArquivo);
         this.loggersRastreador.set(nomeArquivo, loggerCriado);
         return loggerCriado;
+    }
+    exibirMensagemRastreadorEmDesenvolvimento(mensagemBruta) {
+        if (!this.aplicacaoEstaEmModoDesenvolvimento()) {
+            return undefined;
+        }
+        const mensagemFormatada = this.formatarMensagemBrutaRastreador(mensagemBruta);
+        super.debug(mensagemFormatada, this.context);
+        return undefined;
+    }
+    formatarMensagemBrutaRastreador(mensagemBruta) {
+        return `RASTREADOR: ${this.converterValorParaTexto(mensagemBruta)}`;
     }
     criarLoggerRastreador(nomeArquivo) {
         FileSystem.mkdirSync(this.diretorioLogsRastreador, { recursive: true });

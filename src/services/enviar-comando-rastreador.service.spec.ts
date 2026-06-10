@@ -7,15 +7,15 @@ import { ILoger, ISocket } from '../contracts';
 
 describe('EnviarComandoRastreadorService', () => {
   let obterConexao: jest.SpyInstance;
-  let logger: Pick<ILoger, 'mensagemRastreador' | 'debug' | 'error'>;
+  let logger: Pick<ILoger, 'salvarLogRastreador' | 'debug' | 'error'>;
   let canal: Pick<Channel, 'ack' | 'publish'>;
   let servico: EnviarComandoRastreadorService;
 
   beforeEach((): void => {
     logger = {
-      debug             : jest.fn(),
-      error             : jest.fn(),
-      mensagemRastreador: jest.fn(),
+      debug              : jest.fn(),
+      error              : jest.fn(),
+      salvarLogRastreador: jest.fn(),
     };
     canal = {
       ack    : jest.fn(),
@@ -44,7 +44,7 @@ describe('EnviarComandoRastreadorService', () => {
 
     servico.enviarComando(mensagem, comando);
 
-    expect(logger.mensagemRastreador).toHaveBeenCalledWith(
+    expect(logger.salvarLogRastreador).toHaveBeenCalledWith(
       '123456789012345',
       'ST300CMD;123456789012345;02;Enable1',
       'enviada',
