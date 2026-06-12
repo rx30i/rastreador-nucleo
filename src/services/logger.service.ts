@@ -11,7 +11,7 @@ import * as Path from 'node:path';
 @Injectable()
 export class LoggerService extends ConsoleLogger {
   private readonly loggersRastreador: Map<string, Winston.Logger> = new Map<string, Winston.Logger>();
-  private readonly diretorioLogsRastreador: string = 'logs';
+  private readonly diretorioLogsRastreador: string = Path.posix.join('storage', 'logs');
 
   constructor(
     private readonly configService: ConfigService,

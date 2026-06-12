@@ -151,9 +151,9 @@ describe('LoggerService', () => {
 
     logger.salvarLogRastreador('123/456', 'mensagem recebida', 'recebida');
 
-    expect(FileSystem.mkdirSync).toHaveBeenCalledWith('logs', { recursive: true });
+    expect(FileSystem.mkdirSync).toHaveBeenCalledWith('storage/logs', { recursive: true });
     expect(DailyRotateFile).toHaveBeenCalledWith({
-      filename   : 'logs/log-123_456-%DATE%.log',
+      filename   : 'storage/logs/log-123_456-%DATE%.log',
       datePattern: 'YYYY-MM-DD',
       level      : 'info',
     });

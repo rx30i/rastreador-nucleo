@@ -51,7 +51,7 @@ this.loggerService.salvarLogRastreador(
 );
 ```
 
-Os arquivos sao gravados em `logs/log-{imei}-%DATE%.log`, com rotacao diaria no formato `YYYY-MM-DD`. Arquivos antigos nao sao apagados automaticamente.
+Os arquivos sao gravados em `storage/logs/log-{imei}-%DATE%.log`, com rotacao diaria no formato `YYYY-MM-DD`. Arquivos antigos nao sao apagados automaticamente.
 
 Cada linha segue este formato:
 

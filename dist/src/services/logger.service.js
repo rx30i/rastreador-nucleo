@@ -56,7 +56,7 @@ const Path = __importStar(require("node:path"));
 let LoggerService = class LoggerService extends common_1.ConsoleLogger {
     configService;
     loggersRastreador = new Map();
-    diretorioLogsRastreador = 'logs';
+    diretorioLogsRastreador = Path.posix.join('storage', 'logs');
     constructor(configService) {
         super('LoggerService');
         this.configService = configService;
