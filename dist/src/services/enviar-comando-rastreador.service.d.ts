@@ -17,6 +17,7 @@ export declare class EnviarComandoRastreadorService {
     private finalizarMsg;
     private rejeitarMsg;
     private naoPodeSerEnviada;
+    private obterQuantidadeTentativas;
     private publicarResposta;
     decodificarMsg(msg: ConsumeMessage): ComandoUsuarioEntity | undefined;
 }
