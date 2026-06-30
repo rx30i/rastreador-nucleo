@@ -20,7 +20,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@nestjs/config": ">=4.0.1"
+    "@nestjs/config": ">=4.0.1",
+    "winston": ">=3.18.3",
+    "winston-daily-rotate-file": ">=5.0.0"
   },
   "peerDependencies": {
     "@golevelup/nestjs-rabbitmq": ">=6.0.1",
@@ -30,9 +32,7 @@
     "@sentry/node": ">=9.9.0",
     "amqplib": ">=0.10.8",
     "reflect-metadata": ">=0.2.2",
-    "rxjs": ">=7.8.1",
-    "winston": ">=3.18.3",
-    "winston-daily-rotate-file": ">=5.0.0"
+    "rxjs": ">=7.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
