@@ -7,6 +7,7 @@ export declare class ServidorTcp extends Server implements CustomTransportStrate
     private readonly configuracao;
     private static conexoesTcp;
     private readonly separarMsgs;
+    private readonly mensagensIncompletasPorSocket;
     private servidor?;
     constructor(configuracao: IServidorTCPConfig);
     listen(callback: () => void): void;
@@ -26,4 +27,7 @@ export declare class ServidorTcp extends Server implements CustomTransportStrate
     private qtdDispositivosConectados;
     separarMensagens(mensagem: Buffer): string[];
     private separarMensagensComBruto;
+    private separarMensagensComDelimitadorSimetrico;
+    private atualizarMensagemIncompleta;
+    private descartarMensagemIncompleta;
 }

@@ -5,18 +5,23 @@ import { IConsumerDeserializer, IServidorTCPConfig } from '../../contracts';
 import { CodificacaoMsg } from '../../enums';
 import { Logger } from '@nestjs/common';
 
-
 class Deserializer implements IConsumerDeserializer {
   public obterImei(_mensagem: string): string {
     throw new Error('Method not implemented.');
   }
 
-  public deserialize(_value: any, _options?: Record<string, any>): IncomingRequest | IncomingEvent | Promise<IncomingRequest | IncomingEvent> {
+  public deserialize(
+    _value: any,
+    _options?: Record<string, any>,
+  ):
+    IncomingRequest | IncomingEvent | Promise<IncomingRequest | IncomingEvent> {
     throw new Error('Method not implemented.');
   }
 }
 
-function criarSeparadorMensagens(configuracao?: Partial<IServidorTCPConfig>): SepararMensagens {
+function criarSeparadorMensagens(
+  configuracao?: Partial<IServidorTCPConfig>,
+): SepararMensagens {
   return new SepararMensagens({
     codificacaoMsg: CodificacaoMsg.HEX,
     deserializer  : new Deserializer(),
@@ -59,26 +64,102 @@ describe('SepararMensagens', () => {
 
     it('Recebe uma mensagem com prefixo invalido e deve retorna um array contento a mensagem recebida', () => {
       const mensagem = '78770d01086266708570787800007ea40d0a';
-      expect(prefixoSufixo.obterMensagens(mensagem)).toEqual(['78770d01086266708570787800007ea40d0a']);
+      expect(prefixoSufixo.obterMensagens(mensagem)).toEqual([
+        '78770d01086266708570787800007ea40d0a',
+      ]);
     });
 
     it('Recebe uma mensagem com sufixo invalido e deve retorna um array com a mensagem recebida', () => {
       const mensagem = '78780d01086266708570787800007ea40d0b';
-      expect(prefixoSufixo.obterMensagens(mensagem)).toEqual(['78780d01086266708570787800007ea40d0b']);
+      expect(prefixoSufixo.obterMensagens(mensagem)).toEqual([
+        '78780d01086266708570787800007ea40d0b',
+      ]);
     });
 
     it('Recebe 2 mensagens validas e deve retorna um array contendo 2 mensagens', () => {
-      const mensagem = '78780d01086266708570787800007ea40d0a78780d01086266708570787800007ea40d0a';
-      const resposta = ['78780d01086266708570787800007ea40d0a', '78780d01086266708570787800007ea40d0a'];
+      const mensagem =
+        '78780d01086266708570787800007ea40d0a78780d01086266708570787800007ea40d0a';
+      const resposta = [
+        '78780d01086266708570787800007ea40d0a',
+        '78780d01086266708570787800007ea40d0a',
+      ];
 
       expect(prefixoSufixo.obterMensagens(mensagem)).toEqual(resposta);
     });
 
     it('Recebe uma mensagem valida e outra com sufixo invalido e deve retornar um array contendo a mensagem valida', () => {
-      const mensagem = '78780d01086266708570787800007ea40d0a78770d01086266708570787800007ea40d0a';
+      const mensagem =
+        '78780d01086266708570787800007ea40d0a78770d01086266708570787800007ea40d0a';
       const resposta = ['78780d01086266708570787800007ea40d0a'];
 
       expect(prefixoSufixo.obterMensagens(mensagem)).toEqual(resposta);
+    });
+  });
+
+  describe('Metodo obterMensagensComBruto() usando o mesmo delimitador no inicio e no fim', () => {
+    const quadroHeartbeat = '7E0002000001380000000100013B7E';
+
+    it('Recebe um quadro delimitado por 7e e preserva a mensagem bruta', () => {
+      const separadorDelimitadorIgual = criarSeparadorMensagens({
+        prefixo: '7e',
+        sufixo : '7e',
+      });
+
+      expect(
+        separadorDelimitadorIgual.obterMensagensComBruto(quadroHeartbeat),
+      ).toEqual([
+        {
+          mensagem     : quadroHeartbeat.toLowerCase(),
+          mensagemBruta: quadroHeartbeat,
+        },
+      ]);
+    });
+
+    it('Recebe quadros concatenados delimitados por 7e e retorna cada quadro completo', () => {
+      const separadorDelimitadorIgual = criarSeparadorMensagens({
+        prefixo: '7e',
+        sufixo : '7e',
+      });
+      const quadroDesregistro = '7E0003000001380000000100013A7E';
+
+      expect(
+        separadorDelimitadorIgual.obterMensagens(
+          `${quadroHeartbeat}${quadroDesregistro}`,
+        ),
+      ).toEqual([
+        quadroHeartbeat.toLowerCase(),
+        quadroDesregistro.toLowerCase(),
+      ]);
+    });
+  });
+
+  describe('Metodo obterResultadoSeparacao() usando o mesmo delimitador no inicio e no fim', () => {
+    it('Retorna apenas os quadros completos e informa a sobra sem delimitador final', () => {
+      const separadorDelimitadorIgual = criarSeparadorMensagens({
+        prefixo: '7e',
+        sufixo : '7e',
+      });
+      const quadroHeartbeat = '7E0002000001380000000100013B7E';
+      const quadroDesregistro = '7E0003000001380000000100013A7E';
+      const quadroIncompleto = '7E000400000138000000010001';
+
+      expect(
+        separadorDelimitadorIgual.obterResultadoSeparacao(
+          `${quadroHeartbeat}${quadroDesregistro}${quadroIncompleto}`,
+        ),
+      ).toEqual({
+        mensagens: [
+          {
+            mensagem     : quadroHeartbeat.toLowerCase(),
+            mensagemBruta: quadroHeartbeat,
+          },
+          {
+            mensagem     : quadroDesregistro.toLowerCase(),
+            mensagemBruta: quadroDesregistro,
+          },
+        ],
+        mensagemIncompleta: quadroIncompleto,
+      });
     });
   });
 
@@ -92,12 +173,18 @@ describe('SepararMensagens', () => {
 
     it('Recebe uma mensagem com prefixo invalido e deve retorna um array contendo a mensagem recebida', () => {
       const mensagem = '78770d01086266708570787800007ea40d0a';
-      expect(prefixo.obterMensagens(mensagem)).toEqual(['78770d01086266708570787800007ea40d0a']);
+      expect(prefixo.obterMensagens(mensagem)).toEqual([
+        '78770d01086266708570787800007ea40d0a',
+      ]);
     });
 
     it('Recebe 2 mensagens validas e deve retorna um array contendo 2 mensagens', () => {
-      const mensagem = '78780d01086266708570797900007ea40d0a78780d01086266708570797900007ea40d0a';
-      const resposta = ['78780d01086266708570797900007ea40d0a', '78780d01086266708570797900007ea40d0a'];
+      const mensagem =
+        '78780d01086266708570797900007ea40d0a78780d01086266708570797900007ea40d0a';
+      const resposta = [
+        '78780d01086266708570797900007ea40d0a',
+        '78780d01086266708570797900007ea40d0a',
+      ];
 
       expect(prefixo.obterMensagens(mensagem)).toEqual(resposta);
     });
@@ -173,7 +260,11 @@ describe('SepararMensagens', () => {
       const mensagemValida = '79790d01086266708570797900007ea40d0a';
       const mensagemInvalida = '99990d01086266708570787800007ea40d0a';
 
-      expect(prefixosAlternativos.obterMensagens(`${mensagemValida}${mensagemInvalida}`)).toEqual([mensagemValida]);
+      expect(
+        prefixosAlternativos.obterMensagens(
+          `${mensagemValida}${mensagemInvalida}`,
+        ),
+      ).toEqual([mensagemValida]);
     });
 
     it('Recebe array de prefixos vazio sem sufixo e deve tratar como prefixo nao informado', () => {
@@ -220,8 +311,12 @@ describe('SepararMensagens', () => {
     });
 
     it('Recebe 2 mensagens validas e deve retorna um array contendo 2 mensagens', () => {
-      const mensagem = '78780d01086266708570797900007ea40d0a78780d01086266708570797900007ea40d0a';
-      const resposta = ['78780d01086266708570797900007ea40d0a', '78780d01086266708570797900007ea40d0a'];
+      const mensagem =
+        '78780d01086266708570797900007ea40d0a78780d01086266708570797900007ea40d0a';
+      const resposta = [
+        '78780d01086266708570797900007ea40d0a',
+        '78780d01086266708570797900007ea40d0a',
+      ];
 
       expect(sufixo.obterMensagens(mensagem)).toEqual(resposta);
     });

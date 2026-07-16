@@ -1,4 +1,4 @@
-import { ConsumeMessage, Channel } from 'amqplib';
+import { ConsumeMessage, MessagePropertyHeaders, Channel } from 'amqplib';
 import { EnviarComandoRastreadorService } from './enviar-comando-rastreador.service';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { ConfigService } from '@nestjs/config';
@@ -8,7 +8,7 @@ import { ILoger, ISocket } from '../contracts';
 describe('EnviarComandoRastreadorService', () => {
   let obterConexao: jest.SpyInstance;
   let logger: Pick<ILoger, 'salvarLogRastreador' | 'debug' | 'error'>;
-  let canal: Pick<Channel, 'ack' | 'publish'>;
+  let canal: jest.Mocked<Pick<Channel, 'ack' | 'nack' | 'publish'>>;
   let servico: EnviarComandoRastreadorService;
 
   beforeEach((): void => {
@@ -19,6 +19,7 @@ describe('EnviarComandoRastreadorService', () => {
     };
     canal = {
       ack    : jest.fn(),
+      nack   : jest.fn(),
       publish: jest.fn(),
     };
     servico = new EnviarComandoRastreadorService(
@@ -26,7 +27,7 @@ describe('EnviarComandoRastreadorService', () => {
       {} as ConfigService,
       logger as ILoger,
     );
-    (servico as unknown as { channel: Channel }).channel = canal as Channel;
+    (servico as unknown as { channel: Channel }).channel = canal as unknown as Channel;
     obterConexao = jest.spyOn(ServidorTcp, 'obterConexao');
   });
 
@@ -50,9 +51,59 @@ describe('EnviarComandoRastreadorService', () => {
       'enviada',
     );
   });
+
+  it('deve rejeitar comando para retry quando rastreador estiver desconectado na primeira tentativa', (): void => {
+    const comando: Buffer = Buffer.from('ST300CMD;123456789012345;02;Enable1', 'ascii');
+    const mensagem: ConsumeMessage = criarMensagemComando('123456789012345');
+    obterConexao.mockReturnValue(null);
+
+    servico.enviarComando(mensagem, comando);
+
+    expect(canal.nack).toHaveBeenCalledTimes(1);
+    expect(canal.nack).toHaveBeenCalledWith(mensagem, false, false);
+    expect(canal.ack).not.toHaveBeenCalled();
+    expect(canal.publish).not.toHaveBeenCalled();
+  });
+
+  it('deve rejeitar comando para retry quando tentativas estiverem abaixo do limite', (): void => {
+    const comando: Buffer = Buffer.from('ST300CMD;123456789012345;02;Enable1', 'ascii');
+    const mensagem: ConsumeMessage = criarMensagemComando(
+      '123456789012345',
+      criarHeadersTentativasComando(10),
+    );
+    obterConexao.mockReturnValue(null);
+
+    servico.enviarComando(mensagem, comando);
+
+    expect(canal.nack).toHaveBeenCalledTimes(1);
+    expect(canal.nack).toHaveBeenCalledWith(mensagem, false, false);
+    expect(canal.ack).not.toHaveBeenCalled();
+    expect(canal.publish).not.toHaveBeenCalled();
+  });
+
+  it('deve confirmar e publicar erro quando tentativas atingirem o limite', (): void => {
+    const comando: Buffer = Buffer.from('ST300CMD;123456789012345;02;Enable1', 'ascii');
+    const mensagem: ConsumeMessage = criarMensagemComando(
+      '123456789012345',
+      criarHeadersTentativasComando(720),
+    );
+    obterConexao.mockReturnValue(null);
+
+    servico.enviarComando(mensagem, comando);
+
+    expect(canal.nack).not.toHaveBeenCalled();
+    expect(canal.ack).toHaveBeenCalledTimes(1);
+    expect(canal.ack).toHaveBeenCalledWith(mensagem, false);
+    expect(canal.publish).toHaveBeenCalledWith(
+      'amq.direct',
+      'rastreador.erro',
+      mensagem.content,
+    );
+    expect(obterStatusComandoPublicado(canal)).toBe('erro');
+  });
 });
 
-function criarMensagemComando(imei: string): ConsumeMessage {
+function criarMensagemComando(imei: string, headers: MessagePropertyHeaders = {}): ConsumeMessage {
   return {
     content: Buffer.from(JSON.stringify({
       _id             : '10',
@@ -63,7 +114,37 @@ function criarMensagemComando(imei: string): ConsumeMessage {
       imei            : imei,
     }), 'ascii'),
     properties: {
-      headers: {},
+      headers,
     },
   } as ConsumeMessage;
+}
+
+function criarHeadersTentativasComando(tentativas: number): MessagePropertyHeaders {
+  return {
+    'x-death': [
+      {
+        'count'       : tentativas,
+        'exchange'    : 'amq.direct',
+        'queue'       : 'rastreador.comando',
+        'reason'      : 'rejected',
+        'time'        : { '!': 'timestamp', 'value': 0 },
+        'routing-keys': ['rastreador.comando'],
+      },
+    ],
+  };
+}
+
+function obterStatusComandoPublicado(canalComandos: jest.Mocked<Pick<Channel, 'publish'>>): string {
+  const publicacaoMensagem = canalComandos.publish.mock.calls.find(
+    ([, routingKey]: Parameters<Channel['publish']>): boolean => routingKey === 'rastreador.mensagem',
+  );
+
+  if (publicacaoMensagem === undefined) {
+    throw new Error('Status do comando nao publicado.');
+  }
+
+  const [, , conteudo] = publicacaoMensagem;
+  const statusPublicado = JSON.parse(conteudo.toString('ascii')) as { data: { status: string } };
+
+  return statusPublicado.data.status;
 }

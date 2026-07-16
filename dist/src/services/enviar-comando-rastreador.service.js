@@ -76,17 +76,14 @@ class EnviarComandoRastreadorService {
         }
     }
     rejeitarMsg(msgEnviada, rabbitMqMsg) {
-        const headers = rabbitMqMsg.properties.headers;
-        if (headers === undefined || !('x-death' in headers) || !Array.isArray(headers['x-death'])) {
-            return undefined;
-        }
-        if (!msgEnviada && (headers['x-death'][0].count < this.tentativasEnvio)) {
+        const quantidadeTentativas = this.obterQuantidadeTentativas(rabbitMqMsg);
+        if (!msgEnviada && quantidadeTentativas < this.tentativasEnvio) {
             this.obterCanal().nack(rabbitMqMsg, false, false);
         }
     }
     naoPodeSerEnviada(msgEnviada, rabbitMqMsg, comando) {
-        const headers = rabbitMqMsg.properties.headers;
-        if (msgEnviada || !headers?.['x-death'] || headers['x-death'][0].count < this.tentativasEnvio) {
+        const quantidadeTentativas = this.obterQuantidadeTentativas(rabbitMqMsg);
+        if (msgEnviada || quantidadeTentativas < this.tentativasEnvio) {
             return undefined;
         }
         if (comando instanceof entities_1.ComandoUsuarioEntity) {
@@ -95,6 +92,15 @@ class EnviarComandoRastreadorService {
         const canal = this.obterCanal();
         canal.ack(rabbitMqMsg, false);
         canal.publish('amq.direct', 'rastreador.erro', rabbitMqMsg.content);
+    }
+    obterQuantidadeTentativas(rabbitMqMsg) {
+        const headers = rabbitMqMsg.properties.headers;
+        const historicoRejeicao = headers?.['x-death'];
+        if (!Array.isArray(historicoRejeicao)) {
+            return 0;
+        }
+        const primeiraTentativa = historicoRejeicao[0];
+        return typeof primeiraTentativa?.count === 'number' ? primeiraTentativa.count : 0;
     }
     publicarResposta(statusResposta, comando) {
         const dataHora = new Date().toISOString();

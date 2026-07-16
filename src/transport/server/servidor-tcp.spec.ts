@@ -264,6 +264,27 @@ describe('ServidorTcp', () => {
     });
   });
 
+  describe('separarMensagens com delimitador simetrico', () => {
+    it('deve separar quadros completos com delimitador simetrico', () => {
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg: CodificacaoMsg.HEX,
+        prefixo       : '7e',
+        sufixo        : '7e',
+      }));
+      const primeiroQuadro = '7E0102037E';
+      const segundoQuadro = '7E0405067E';
+
+      expect(
+        servidorTcp.separarMensagens(
+          Buffer.from(`${primeiroQuadro}${segundoQuadro}`, 'hex'),
+        ),
+      ).toEqual([
+        primeiroQuadro.toLowerCase(),
+        segundoQuadro.toLowerCase(),
+      ]);
+    });
+  });
+
   describe('mensagem', () => {
     beforeEach(() => {
       servidorTcp = new ServidorTcp(criarConfiguracao({
@@ -361,6 +382,129 @@ describe('ServidorTcp', () => {
       expect(contextosRecebidos[0].mensagemBruta()).toBe(primeiraMensagem);
       expect(contextosRecebidos[1].mensagem()).toBe('aalt;2');
       expect(contextosRecebidos[1].mensagemBruta()).toBe(segundaMensagem);
+    });
+  });
+
+  describe('mensagem com delimitador simetrico', () => {
+    beforeEach(() => {
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg: CodificacaoMsg.HEX,
+        deserializer  : new DeserializerSuntechMock(),
+        prefixo       : '7e',
+        sufixo        : '7e',
+      }));
+    });
+
+    it('deve aguardar o delimitador final de quadro recebido em eventos distintos', async () => {
+      const socketMock = criarSocketMock();
+      const contextosRecebidos: TcpContext[] = [];
+      const consumidor = jest.fn(criarConsumidorCapturandoContextos(contextosRecebidos));
+      const quadro = '7E0102037E';
+      servidorTcp.addHandler('suntech', consumidor, true);
+
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+
+      const callbackDados = obterCallbackDados(socketMock);
+      callbackDados(Buffer.from(quadro.slice(0, -2), 'hex'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).not.toHaveBeenCalled();
+
+      callbackDados(Buffer.from(quadro.slice(-2), 'hex'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).toHaveBeenCalledTimes(1);
+      expect(contextosRecebidos[0].mensagem()).toBe(quadro.toLowerCase());
+      expect(contextosRecebidos[0].mensagemBruta()).toBe(quadro.toLowerCase());
+    });
+
+    it('deve entregar o quadro completo e reter somente a sobra do proximo quadro', async () => {
+      const socketMock = criarSocketMock();
+      const contextosRecebidos: TcpContext[] = [];
+      const consumidor = jest.fn(criarConsumidorCapturandoContextos(contextosRecebidos));
+      const primeiroQuadro = '7E0102037E';
+      const segundoQuadro = '7E0405067E';
+      servidorTcp.addHandler('suntech', consumidor, true);
+
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+
+      const callbackDados = obterCallbackDados(socketMock);
+      callbackDados(Buffer.from(`${primeiroQuadro}${segundoQuadro.slice(0, -2)}`, 'hex'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).toHaveBeenCalledTimes(1);
+      expect(contextosRecebidos[0].mensagem()).toBe(primeiroQuadro.toLowerCase());
+
+      callbackDados(Buffer.from(segundoQuadro.slice(-2), 'hex'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).toHaveBeenCalledTimes(2);
+      expect(contextosRecebidos[1].mensagem()).toBe(segundoQuadro.toLowerCase());
+    });
+
+    it('deve manter mensagens incompletas isoladas entre sockets', async () => {
+      const primeiroSocket = criarSocketMock();
+      const segundoSocket = criarSocketMock();
+      const contextosRecebidos: TcpContext[] = [];
+      const consumidor = jest.fn(criarConsumidorCapturandoContextos(contextosRecebidos));
+      servidorTcp.addHandler('suntech', consumidor, true);
+
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(primeiroSocket);
+      servidor.mensagem(segundoSocket);
+
+      const callbackPrimeiroSocket = obterCallbackDados(primeiroSocket);
+      const callbackSegundoSocket = obterCallbackDados(segundoSocket);
+      callbackPrimeiroSocket(Buffer.from('7e0102', 'hex'));
+      callbackSegundoSocket(Buffer.from('7e0304', 'hex'));
+      callbackPrimeiroSocket(Buffer.from('7e', 'hex'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).toHaveBeenCalledTimes(1);
+      expect(contextosRecebidos[0].mensagem()).toBe('7e01027e');
+
+      callbackSegundoSocket(Buffer.from('7e', 'hex'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(consumidor).toHaveBeenCalledTimes(2);
+      expect(contextosRecebidos[1].mensagem()).toBe('7e03047e');
+    });
+
+    it('deve descartar e registrar quadro truncado quando a conexao for encerrada', async () => {
+      const logger = new Logger();
+      const registrarErro = jest.spyOn(logger, 'error').mockImplementation();
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg: CodificacaoMsg.HEX,
+        deserializer  : new DeserializerSuntechMock(),
+        prefixo       : '7e',
+        sufixo        : '7e',
+        tratarErro    : logger,
+      }));
+      const encerrarSocket = jest.fn();
+      const destruirSocket = jest.fn();
+      const socketMock = criarSocketMock({
+        destroy: destruirSocket as unknown as ISocket['destroy'],
+        end    : encerrarSocket as unknown as ISocket['end'],
+      });
+
+      const servidor = servidorTcp as unknown as {
+        mensagem: (socket: ISocket) => void;
+        clienteDesconectou: (socket: ISocket) => Promise<void>;
+      };
+      servidor.mensagem(socketMock);
+
+      const callbackDados = obterCallbackDados(socketMock);
+      callbackDados(Buffer.from('7e0102', 'hex'));
+      await aguardarProcessamentoAssincrono();
+      await servidor.clienteDesconectou(socketMock);
+
+      expect(registrarErro).toHaveBeenCalledWith(
+        'Class ServidorTcp Quadro incompleto descartado 7e0102',
+      );
+      expect(encerrarSocket).toHaveBeenCalledTimes(1);
+      expect(destruirSocket).toHaveBeenCalledTimes(1);
     });
   });
 

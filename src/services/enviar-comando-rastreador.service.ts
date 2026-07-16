@@ -154,12 +154,8 @@ export class EnviarComandoRastreadorService {
    * @return {undefined}
    */
   private rejeitarMsg(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage): undefined {
-    const headers = rabbitMqMsg.properties.headers;
-    if (headers === undefined || !('x-death' in headers) || !Array.isArray(headers['x-death'])) {
-      return undefined;
-    }
-
-    if (!msgEnviada && (headers['x-death'][0].count < this.tentativasEnvio)) {
+    const quantidadeTentativas = this.obterQuantidadeTentativas(rabbitMqMsg);
+    if (!msgEnviada && quantidadeTentativas < this.tentativasEnvio) {
       this.obterCanal().nack(rabbitMqMsg, false, false);
     }
   }
@@ -175,8 +171,8 @@ export class EnviarComandoRastreadorService {
    * @return {void}
    */
   private naoPodeSerEnviada(msgEnviada: boolean, rabbitMqMsg: ConsumeMessage, comando?: ComandoUsuarioEntity): void {
-    const headers: MessagePropertyHeaders | undefined = rabbitMqMsg.properties.headers;
-    if (msgEnviada || !headers?.['x-death'] || headers['x-death'][0].count < this.tentativasEnvio) {
+    const quantidadeTentativas = this.obterQuantidadeTentativas(rabbitMqMsg);
+    if (msgEnviada || quantidadeTentativas < this.tentativasEnvio) {
       return undefined;
     }
 
@@ -191,6 +187,19 @@ export class EnviarComandoRastreadorService {
       'rastreador.erro',
       rabbitMqMsg.content,
     );
+  }
+
+  private obterQuantidadeTentativas(rabbitMqMsg: ConsumeMessage): number {
+    const headers: MessagePropertyHeaders | undefined = rabbitMqMsg.properties.headers;
+    const historicoRejeicao = headers?.['x-death'];
+
+    if (!Array.isArray(historicoRejeicao)) {
+      return 0;
+    }
+
+    const primeiraTentativa = historicoRejeicao[0] as { count?: unknown } | undefined;
+
+    return typeof primeiraTentativa?.count === 'number' ? primeiraTentativa.count : 0;
   }
 
   /**

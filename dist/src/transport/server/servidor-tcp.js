@@ -45,6 +45,7 @@ class ServidorTcp extends microservices_1.Server {
     configuracao;
     static conexoesTcp;
     separarMsgs;
+    mensagensIncompletasPorSocket = new WeakMap();
     servidor;
     constructor(configuracao) {
         super();
@@ -90,7 +91,7 @@ class ServidorTcp extends microservices_1.Server {
     }
     mensagem(socket) {
         socket.on('data', (message) => void (async () => {
-            for (const resposta of this.separarMensagensComBruto(message)) {
+            for (const resposta of this.separarMensagensComBruto(message, socket)) {
                 const tcpContexto = new ctx_host_1.TcpContext([
                     socket,
                     resposta.mensagem,
@@ -146,6 +147,7 @@ class ServidorTcp extends microservices_1.Server {
         });
     }
     async clienteDesconectou(socket) {
+        this.descartarMensagemIncompleta(socket);
         const imei = socket.imei ?? '';
         const socketSalvo = ServidorTcp.conexoesTcp.get(imei);
         if ((socketSalvo?.id ?? null) === socket.id) {
@@ -206,7 +208,7 @@ class ServidorTcp extends microservices_1.Server {
         return this.separarMensagensComBruto(mensagem)
             .map((mensagemSeparada) => mensagemSeparada.mensagem);
     }
-    separarMensagensComBruto(mensagem) {
+    separarMensagensComBruto(mensagem, socket) {
         let mensagemString = this.stringDecoder.write(mensagem);
         const quantidadeMenagem = (mensagemString.match(/\d+#{/g) ?? []).length;
         if (quantidadeMenagem > 0) {
@@ -226,9 +228,34 @@ class ServidorTcp extends microservices_1.Server {
             }
             return arrayMensagens;
         }
+        if (socket !== undefined && this.separarMsgs.possuiDelimitadorSimetrico()) {
+            return this.separarMensagensComDelimitadorSimetrico(socket, mensagem);
+        }
         const codificacao = this.configuracao.codificacaoMsg;
         const demaisMsg = mensagem.toString(codificacao);
         return this.separarMsgs.obterMensagensComBruto(demaisMsg);
+    }
+    separarMensagensComDelimitadorSimetrico(socket, mensagem) {
+        const mensagemPendente = this.mensagensIncompletasPorSocket.get(socket) ?? '';
+        const mensagemRecebida = mensagem.toString(this.configuracao.codificacaoMsg);
+        const resultado = this.separarMsgs.obterResultadoSeparacao(`${mensagemPendente}${mensagemRecebida}`);
+        this.atualizarMensagemIncompleta(socket, resultado.mensagemIncompleta);
+        return resultado.mensagens;
+    }
+    atualizarMensagemIncompleta(socket, mensagemIncompleta) {
+        if (mensagemIncompleta === '') {
+            this.mensagensIncompletasPorSocket.delete(socket);
+            return;
+        }
+        this.mensagensIncompletasPorSocket.set(socket, mensagemIncompleta);
+    }
+    descartarMensagemIncompleta(socket) {
+        const mensagemIncompleta = this.mensagensIncompletasPorSocket.get(socket);
+        if (mensagemIncompleta === undefined) {
+            return;
+        }
+        this.mensagensIncompletasPorSocket.delete(socket);
+        this.configuracao.tratarErro.error(`Class ServidorTcp Quadro incompleto descartado ${mensagemIncompleta}`);
     }
 }
 exports.ServidorTcp = ServidorTcp;
