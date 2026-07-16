@@ -7,8 +7,7 @@ class SepararMensagens {
         this.servidorTCPConfig = servidorTCPConfig;
     }
     obterMensagens(mensagem) {
-        return this.obterMensagensComBruto(mensagem)
-            .map((mensagemSeparada) => mensagemSeparada.mensagem);
+        return this.obterMensagensComBruto(mensagem).map((mensagemSeparada) => mensagemSeparada.mensagem);
     }
     obterMensagensComBruto(mensagem) {
         const mensagens = [];
@@ -90,10 +89,11 @@ class SepararMensagens {
         const mensagemNormalizada = mensagem.toLowerCase();
         let posicaoInicial = 0;
         while (posicaoInicial < mensagemNormalizada.length) {
-            if (this.obterPrefixoNaPosicao(mensagemNormalizada, prefixosOrdenados, posicaoInicial) === undefined) {
+            const prefixo = this.obterPrefixoNaPosicao(mensagemNormalizada, prefixosOrdenados, posicaoInicial);
+            if (prefixo === undefined) {
                 break;
             }
-            const posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
+            const posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial + prefixo.length);
             if (posicaoSufixo === -1) {
                 break;
             }

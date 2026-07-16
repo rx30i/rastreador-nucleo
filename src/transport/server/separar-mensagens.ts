@@ -17,13 +17,12 @@ export interface MensagemSeparada {
  * a aplicacao e na aplicacao e verificada se e uma mensagem valida ou nao.
  */
 export class SepararMensagens {
-  constructor(
-    private readonly servidorTCPConfig: IServidorTCPConfig,
-  ) {}
+  constructor(private readonly servidorTCPConfig: IServidorTCPConfig) {}
 
   public obterMensagens(mensagem: string): string[] {
-    return this.obterMensagensComBruto(mensagem)
-      .map((mensagemSeparada: MensagemSeparada): string => mensagemSeparada.mensagem);
+    return this.obterMensagensComBruto(mensagem).map(
+      (mensagemSeparada: MensagemSeparada): string => mensagemSeparada.mensagem,
+    );
   }
 
   public obterMensagensComBruto(mensagem: string): MensagemSeparada[] {
@@ -33,7 +32,7 @@ export class SepararMensagens {
     }
 
     const prefixos = this.obterPrefixosNormalizados();
-    const sufixo   = this.obterSufixoNormalizado();
+    const sufixo = this.obterSufixoNormalizado();
 
     if (prefixos.length > 0 && sufixo.length > 0) {
       return this.separarMsgPeloPrefixoSufixo(mensagem, prefixos, sufixo);
@@ -52,14 +51,17 @@ export class SepararMensagens {
 
   /**
    * @return {string[]}
-  */
+   */
   private obterPrefixosNormalizados(): string[] {
     const prefixoConfigurado = this.servidorTCPConfig.prefixo;
     const prefixos: (string | undefined)[] = Array.isArray(prefixoConfigurado)
       ? prefixoConfigurado
       : [prefixoConfigurado];
     const prefixosNormalizados = prefixos
-      .filter((prefixo: string | undefined): prefixo is string => typeof prefixo === 'string')
+      .filter(
+        (prefixo: string | undefined): prefixo is string =>
+          typeof prefixo === 'string',
+      )
       .map((prefixo: string): string => prefixo.toLowerCase())
       .filter((prefixo: string): boolean => prefixo.length > 0);
 
@@ -68,7 +70,7 @@ export class SepararMensagens {
 
   /**
    * @return {string}
-  */
+   */
   private obterSufixoNormalizado(): string {
     const sufixo = this.servidorTCPConfig.sufixo;
     if (typeof sufixo !== 'string' || sufixo.length === 0) {
@@ -82,12 +84,18 @@ export class SepararMensagens {
    * @param  {string} mensagem
    * @param  {string[]} prefixos
    * @return {MensagemSeparada[]}
-  */
-  private separarMsgPeloPrefixo(mensagem: string, prefixos: string[]): MensagemSeparada[] {
+   */
+  private separarMsgPeloPrefixo(
+    mensagem: string,
+    prefixos: string[],
+  ): MensagemSeparada[] {
     const mensagens: MensagemSeparada[] = [];
     const mensagemNormalizada = mensagem.toLowerCase();
     const prefixosOrdenados = this.ordenarPrefixosPorTamanho(prefixos);
-    const posicoesDosPrefixos = this.obterPosicoesDosPrefixos(mensagemNormalizada, prefixosOrdenados);
+    const posicoesDosPrefixos = this.obterPosicoesDosPrefixos(
+      mensagemNormalizada,
+      prefixosOrdenados,
+    );
 
     if (posicoesDosPrefixos[0] !== 0) {
       mensagens.push(this.criarMensagemSeparada(mensagemNormalizada, mensagem));
@@ -96,12 +104,21 @@ export class SepararMensagens {
 
     for (let indice = 0; indice < posicoesDosPrefixos.length; indice++) {
       const posicaoInicial = posicoesDosPrefixos[indice];
-      const posicaoFinal = posicoesDosPrefixos[indice + 1] ?? mensagemNormalizada.length;
-      const resposta = mensagemNormalizada.substring(posicaoInicial, posicaoFinal);
+      const posicaoFinal =
+        posicoesDosPrefixos[indice + 1] ?? mensagemNormalizada.length;
+      const resposta = mensagemNormalizada.substring(
+        posicaoInicial,
+        posicaoFinal,
+      );
       const respostaBruta = mensagem.substring(posicaoInicial, posicaoFinal);
 
       if (resposta !== '') {
-        mensagens.push(this.criarMensagemSeparada(this.removerQuebrasDeLinha(resposta), respostaBruta));
+        mensagens.push(
+          this.criarMensagemSeparada(
+            this.removerQuebrasDeLinha(resposta),
+            respostaBruta,
+          ),
+        );
       }
     }
 
@@ -112,8 +129,11 @@ export class SepararMensagens {
    * @param  {string} mensagem
    * @param  {string} sufixo
    * @return {MensagemSeparada[]}
-  */
-  private separarMsgPeloSufixo(mensagem: string, sufixo: string): MensagemSeparada[] {
+   */
+  private separarMsgPeloSufixo(
+    mensagem: string,
+    sufixo: string,
+  ): MensagemSeparada[] {
     const mensagens: MensagemSeparada[] = [];
     const mensagemNormalizada = mensagem.toLowerCase();
 
@@ -125,10 +145,18 @@ export class SepararMensagens {
     let posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
     while (posicaoSufixo !== -1) {
       const fimMensagem = posicaoSufixo + sufixo.length;
-      const mensagemCompleta = mensagemNormalizada.substring(posicaoInicial, fimMensagem);
+      const mensagemCompleta = mensagemNormalizada.substring(
+        posicaoInicial,
+        fimMensagem,
+      );
       const mensagemBruta = mensagem.substring(posicaoInicial, fimMensagem);
 
-      mensagens.push(this.criarMensagemSeparada(this.removerQuebrasDeLinha(mensagemCompleta), mensagemBruta));
+      mensagens.push(
+        this.criarMensagemSeparada(
+          this.removerQuebrasDeLinha(mensagemCompleta),
+          mensagemBruta,
+        ),
+      );
 
       posicaoInicial = fimMensagem;
       posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
@@ -142,29 +170,46 @@ export class SepararMensagens {
    * @param  {string[]} prefixos
    * @param  {string} sufixo
    * @return {MensagemSeparada[]}
-  */
-  private separarMsgPeloPrefixoSufixo(mensagem: string, prefixos: string[], sufixo: string): MensagemSeparada[] {
+   */
+  private separarMsgPeloPrefixoSufixo(
+    mensagem: string,
+    prefixos: string[],
+    sufixo: string,
+  ): MensagemSeparada[] {
     const mensagens: MensagemSeparada[] = [];
     const prefixosOrdenados = this.ordenarPrefixosPorTamanho(prefixos);
     const mensagemNormalizada = mensagem.toLowerCase();
 
     let posicaoInicial = 0;
     while (posicaoInicial < mensagemNormalizada.length) {
-      if (this.obterPrefixoNaPosicao(mensagemNormalizada, prefixosOrdenados, posicaoInicial) === undefined) {
+      const prefixo = this.obterPrefixoNaPosicao(
+        mensagemNormalizada,
+        prefixosOrdenados,
+        posicaoInicial,
+      );
+      if (prefixo === undefined) {
         break;
       }
 
-      const posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
+      const posicaoSufixo = mensagemNormalizada.indexOf(
+        sufixo,
+        posicaoInicial + prefixo.length,
+      );
       if (posicaoSufixo === -1) {
         break;
       }
 
       const fimMensagem = posicaoSufixo + sufixo.length;
-      const mensagemCompleta = mensagemNormalizada.substring(posicaoInicial, fimMensagem);
+      const mensagemCompleta = mensagemNormalizada.substring(
+        posicaoInicial,
+        fimMensagem,
+      );
       const mensagemBruta = mensagem.substring(posicaoInicial, fimMensagem);
 
       posicaoInicial = fimMensagem;
-      mensagens.push(this.criarMensagemSeparada(mensagemCompleta, mensagemBruta));
+      mensagens.push(
+        this.criarMensagemSeparada(mensagemCompleta, mensagemBruta),
+      );
     }
 
     if (mensagens.length === 0) {
@@ -177,10 +222,11 @@ export class SepararMensagens {
   /**
    * @param  {string[]} prefixos
    * @return {string[]}
-  */
+   */
   private ordenarPrefixosPorTamanho(prefixos: string[]): string[] {
-    return [...prefixos].sort((primeiroPrefixo: string, segundoPrefixo: string): number =>
-      segundoPrefixo.length - primeiroPrefixo.length,
+    return [...prefixos].sort(
+      (primeiroPrefixo: string, segundoPrefixo: string): number =>
+        segundoPrefixo.length - primeiroPrefixo.length,
     );
   }
 
@@ -188,13 +234,20 @@ export class SepararMensagens {
    * @param  {string} mensagem
    * @param  {string[]} prefixos
    * @return {number[]}
-  */
-  private obterPosicoesDosPrefixos(mensagem: string, prefixos: string[]): number[] {
+   */
+  private obterPosicoesDosPrefixos(
+    mensagem: string,
+    prefixos: string[],
+  ): number[] {
     const posicoes: number[] = [];
     let posicaoAtual = 0;
 
     while (posicaoAtual < mensagem.length) {
-      const prefixo = this.obterPrefixoNaPosicao(mensagem, prefixos, posicaoAtual);
+      const prefixo = this.obterPrefixoNaPosicao(
+        mensagem,
+        prefixos,
+        posicaoAtual,
+      );
       if (prefixo === undefined) {
         posicaoAtual = posicaoAtual + 1;
         continue;
@@ -212,15 +265,21 @@ export class SepararMensagens {
    * @param  {string[]} prefixos
    * @param  {number} posicao
    * @return {string | undefined}
-  */
-  private obterPrefixoNaPosicao(mensagem: string, prefixos: string[], posicao: number): string | undefined {
-    return prefixos.find((prefixo: string): boolean => mensagem.startsWith(prefixo, posicao));
+   */
+  private obterPrefixoNaPosicao(
+    mensagem: string,
+    prefixos: string[],
+    posicao: number,
+  ): string | undefined {
+    return prefixos.find((prefixo: string): boolean =>
+      mensagem.startsWith(prefixo, posicao),
+    );
   }
 
   /**
    * @param  {string} mensagem
    * @return {string}
-  */
+   */
   private removerQuebrasDeLinha(mensagem: string): string {
     return mensagem.replace(/(\r\n|\n|\r)/gm, '');
   }
@@ -229,8 +288,11 @@ export class SepararMensagens {
    * @param  {string} mensagem
    * @param  {string} mensagemBruta
    * @return {MensagemSeparada}
-  */
-  private criarMensagemSeparada(mensagem: string, mensagemBruta: string): MensagemSeparada {
+   */
+  private criarMensagemSeparada(
+    mensagem: string,
+    mensagemBruta: string,
+  ): MensagemSeparada {
     return {
       mensagem,
       mensagemBruta,
