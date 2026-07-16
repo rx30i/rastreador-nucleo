@@ -133,6 +133,36 @@ describe('SepararMensagens', () => {
     });
   });
 
+  describe('Metodo obterResultadoSeparacao() usando o mesmo delimitador no inicio e no fim', () => {
+    it('Retorna apenas os quadros completos e informa a sobra sem delimitador final', () => {
+      const separadorDelimitadorIgual = criarSeparadorMensagens({
+        prefixo: '7e',
+        sufixo : '7e',
+      });
+      const quadroHeartbeat = '7E0002000001380000000100013B7E';
+      const quadroDesregistro = '7E0003000001380000000100013A7E';
+      const quadroIncompleto = '7E000400000138000000010001';
+
+      expect(
+        separadorDelimitadorIgual.obterResultadoSeparacao(
+          `${quadroHeartbeat}${quadroDesregistro}${quadroIncompleto}`,
+        ),
+      ).toEqual({
+        mensagens: [
+          {
+            mensagem     : quadroHeartbeat.toLowerCase(),
+            mensagemBruta: quadroHeartbeat,
+          },
+          {
+            mensagem     : quadroDesregistro.toLowerCase(),
+            mensagemBruta: quadroDesregistro,
+          },
+        ],
+        mensagemIncompleta: quadroIncompleto,
+      });
+    });
+  });
+
   describe('Metodo obterMensagens() usando prefixo para separar as mensagens', () => {
     it('Recebe uma mensagem valida e retorna um array contendo a mensagem', () => {
       const mensagem = '78780d01086266708570797900007ea40d0a';

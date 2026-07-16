@@ -15,6 +15,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   private readonly configuracao: IServidorTCPConfig;
   private static conexoesTcp: Map<string, ISocket>;
   private readonly separarMsgs: SepararMensagens;
+  private readonly mensagensIncompletasPorSocket = new WeakMap<ISocket, string>();
   private servidor?: Net.Server;
 
   constructor(configuracao: IServidorTCPConfig) {
@@ -112,7 +113,7 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    */
   private mensagem(socket: ISocket): void {
     socket.on('data', (message: Buffer) => void (async () => {
-      for (const resposta of this.separarMensagensComBruto(message)) {
+      for (const resposta of this.separarMensagensComBruto(message, socket)) {
         const tcpContexto  = new TcpContext([
           socket,
           resposta.mensagem,
@@ -215,6 +216,8 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * @return {void}
    */
   private async clienteDesconectou(socket: ISocket): Promise<void> {
+    this.descartarMensagemIncompleta(socket);
+
     const imei: string = socket.imei ?? '';
     const socketSalvo  = ServidorTcp.conexoesTcp.get(imei);
     if ((socketSalvo?.id ?? null) === socket.id) {
@@ -340,7 +343,10 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * @param {Buffer} mensagem
    * @return {MensagemSeparada[]}
   */
-  private separarMensagensComBruto(mensagem: Buffer): MensagemSeparada[] {
+  private separarMensagensComBruto(
+    mensagem: Buffer,
+    socket?: ISocket,
+  ): MensagemSeparada[] {
     // Mensagens enviadas por uma aplicação Nest
     let mensagemString = this.stringDecoder.write(mensagem);
     const quantidadeMenagem = (mensagemString.match(/\d+#{/g) ?? []).length;
@@ -366,9 +372,51 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
     }
 
     // Mensagens enviadas pelos rastreadores
+    if (socket !== undefined && this.separarMsgs.possuiDelimitadorSimetrico()) {
+      return this.separarMensagensComDelimitadorSimetrico(socket, mensagem);
+    }
+
     const codificacao = this.configuracao.codificacaoMsg;
     const demaisMsg   = mensagem.toString(codificacao);
 
     return this.separarMsgs.obterMensagensComBruto(demaisMsg);
+  }
+
+  private separarMensagensComDelimitadorSimetrico(
+    socket: ISocket,
+    mensagem: Buffer,
+  ): MensagemSeparada[] {
+    const mensagemPendente = this.mensagensIncompletasPorSocket.get(socket) ?? '';
+    const mensagemRecebida = mensagem.toString(this.configuracao.codificacaoMsg);
+    const resultado = this.separarMsgs.obterResultadoSeparacao(
+      `${mensagemPendente}${mensagemRecebida}`,
+    );
+
+    this.atualizarMensagemIncompleta(socket, resultado.mensagemIncompleta);
+    return resultado.mensagens;
+  }
+
+  private atualizarMensagemIncompleta(
+    socket: ISocket,
+    mensagemIncompleta: string,
+  ): void {
+    if (mensagemIncompleta === '') {
+      this.mensagensIncompletasPorSocket.delete(socket);
+      return;
+    }
+
+    this.mensagensIncompletasPorSocket.set(socket, mensagemIncompleta);
+  }
+
+  private descartarMensagemIncompleta(socket: ISocket): void {
+    const mensagemIncompleta = this.mensagensIncompletasPorSocket.get(socket);
+    if (mensagemIncompleta === undefined) {
+      return;
+    }
+
+    this.mensagensIncompletasPorSocket.delete(socket);
+    this.configuracao.tratarErro.error(
+      `Class ServidorTcp Quadro incompleto descartado ${mensagemIncompleta}`,
+    );
   }
 }

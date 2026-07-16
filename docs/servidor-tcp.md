@@ -230,6 +230,12 @@ O servidor trata automaticamente mensagens concatenadas pelo protocolo TCP:
 
 Quando `prefixo` receber um array, cada item será tratado como um prefixo alternativo válido. Exemplo:
 
+#### Delimitador simétrico
+
+Quando houver um único `prefixo` igual ao `sufixo`, como `7e` em protocolos JT/T 808, o servidor considera o primeiro delimitador como abertura e procura o próximo como fechamento. Quadros concatenados são entregues separadamente, com os dois delimitadores preservados.
+
+Em uma conexão TCP, um quadro pode chegar em mais de um evento `data`. Nessa configuração, o servidor mantém a parte iniciada e sem delimitador final apenas naquele socket; ela é concatenada ao próximo evento e só é encaminhada ao deserializador depois de completa. Se a conexão for encerrada antes do fechamento, o quadro truncado é descartado e registrado no logger configurado.
+
 ```typescript
 new ServidorTcp({
   deserializer  : new Deserializer(),
