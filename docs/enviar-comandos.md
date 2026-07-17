@@ -15,6 +15,8 @@ O fluxo de envio de comandos funciona da seguinte maneira:
 6. O rastreador confirma o recebimento do comando
 7. uma nova resposta é publicada na fila do rabbitMq informando o status do envio (confirmado ou erro)
 
+O `Buffer` recebido pelo serviço é escrito diretamente no socket retornado por `ServidorTcp.obterConexao(imei)`, sem envelope ou framing adicional. A confirmação do rastreador retorna como uma mensagem normal do protocolo do equipamento e é processada por um controller com `@EventPattern`.
+
 
 ## Variáveis de Ambiente
 
@@ -184,7 +186,7 @@ Envia o comando ao rastreador conectado.
 **Comportamento:**
 - Decodifica a mensagem para extrair os dados do comando
 - Busca a conexão TCP do rastreador pelo IMEI
-- Envia o comando se o rastreador estiver conectado
+- Escreve exatamente o `Buffer` recebido no socket, sem framing adicional
 - Publica resposta na fila `rastreador.mensagem` ou `rastreador.erro`
 
 ### `decodificarMsg(msg)`

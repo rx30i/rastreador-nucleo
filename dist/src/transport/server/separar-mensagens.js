@@ -23,7 +23,7 @@ class SepararMensagens {
         return this.configuracaoPossuiDelimitadorSimetrico(this.obterPrefixosNormalizados(), this.obterSufixoNormalizado());
     }
     obterResultadoSeparacao(mensagem) {
-        if (!mensagem || typeof mensagem !== 'string' || mensagem.length === 0) {
+        if (mensagem.length === 0) {
             return {
                 mensagens: [],
                 mensagemIncompleta: '',
@@ -34,22 +34,24 @@ class SepararMensagens {
         if (this.configuracaoPossuiDelimitadorSimetrico(prefixos, sufixo)) {
             return this.separarMensagensPeloDelimitadorSimetrico(mensagem, sufixo);
         }
+        if (prefixos.length > 0 && sufixo.length > 0) {
+            return this.separarMensagensPeloPrefixoSufixo(mensagem, prefixos, sufixo);
+        }
         return {
             mensagens: this.obterMensagensPelaConfiguracao(mensagem, prefixos, sufixo),
             mensagemIncompleta: '',
         };
     }
     obterMensagensPelaConfiguracao(mensagem, prefixos, sufixo) {
-        if (prefixos.length > 0 && sufixo.length > 0) {
-            return this.separarMsgPeloPrefixoSufixo(mensagem, prefixos, sufixo);
-        }
         if (prefixos.length > 0) {
             return this.separarMsgPeloPrefixo(mensagem, prefixos);
         }
         if (sufixo.length > 0) {
             return this.separarMsgPeloSufixo(mensagem, sufixo);
         }
-        return [];
+        return [
+            this.criarMensagemSeparada(mensagem.toLowerCase(), mensagem),
+        ];
     }
     configuracaoPossuiDelimitadorSimetrico(prefixos, sufixo) {
         return prefixos.length === 1 && prefixos[0] === sufixo;
@@ -147,7 +149,7 @@ class SepararMensagens {
         }
         return mensagens;
     }
-    separarMsgPeloPrefixoSufixo(mensagem, prefixos, sufixo) {
+    separarMensagensPeloPrefixoSufixo(mensagem, prefixos, sufixo) {
         const mensagens = [];
         const prefixosOrdenados = this.ordenarPrefixosPorTamanho(prefixos);
         const mensagemNormalizada = mensagem.toLowerCase();
@@ -155,11 +157,14 @@ class SepararMensagens {
         while (posicaoInicial < mensagemNormalizada.length) {
             const prefixo = this.obterPrefixoNaPosicao(mensagemNormalizada, prefixosOrdenados, posicaoInicial);
             if (prefixo === undefined) {
-                break;
+                return this.criarResultadoSemPrefixoCompleto(mensagem, mensagemNormalizada, prefixosOrdenados, posicaoInicial, mensagens);
             }
             const posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial + prefixo.length);
             if (posicaoSufixo === -1) {
-                break;
+                return {
+                    mensagens,
+                    mensagemIncompleta: mensagem.substring(posicaoInicial),
+                };
             }
             const fimMensagem = posicaoSufixo + sufixo.length;
             const mensagemCompleta = mensagemNormalizada.substring(posicaoInicial, fimMensagem);
@@ -167,10 +172,29 @@ class SepararMensagens {
             posicaoInicial = fimMensagem;
             mensagens.push(this.criarMensagemSeparada(mensagemCompleta, mensagemBruta));
         }
+        return {
+            mensagens,
+            mensagemIncompleta: '',
+        };
+    }
+    criarResultadoSemPrefixoCompleto(mensagem, mensagemNormalizada, prefixos, posicaoInicial, mensagens) {
+        const mensagemRestante = mensagemNormalizada.substring(posicaoInicial);
+        if (this.podeSerInicioDePrefixo(mensagemRestante, prefixos)) {
+            return {
+                mensagens,
+                mensagemIncompleta: mensagem.substring(posicaoInicial),
+            };
+        }
         if (mensagens.length === 0) {
             mensagens.push(this.criarMensagemSeparada(mensagemNormalizada, mensagem));
         }
-        return mensagens;
+        return {
+            mensagens,
+            mensagemIncompleta: '',
+        };
+    }
+    podeSerInicioDePrefixo(mensagem, prefixos) {
+        return prefixos.some((prefixo) => prefixo.startsWith(mensagem));
     }
     ordenarPrefixosPorTamanho(prefixos) {
         return [...prefixos].sort((primeiroPrefixo, segundoPrefixo) => segundoPrefixo.length - primeiroPrefixo.length);

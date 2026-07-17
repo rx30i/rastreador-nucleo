@@ -1,48 +1,39 @@
-import { WritePacket, PacketId, IncomingEvent, Server, BaseRpcContext } from '@nestjs/microservices';
-import { CustomTransportStrategy, IncomingRequest } from '@nestjs/microservices';
-import { IServidorTCPConfig, ISocket } from '../../contracts';
+import { BaseRpcContext, CustomTransportStrategy, IncomingEvent, Server } from '@nestjs/microservices';
 import { SepararMensagens, type MensagemSeparada } from './separar-mensagens';
-import { StringDecoder } from 'node:string_decoder';
+import { IServidorTCPConfig, ISocket } from '../../contracts';
 import { TcpContext } from '../ctx-host';
 import { Pattern } from '../../enums';
 import * as Net from 'node:net';
 
-
-declare type MsgRecebida = IncomingRequest | IncomingEvent | Promise<IncomingRequest | IncomingEvent>;
-
 export class ServidorTcp extends Server implements CustomTransportStrategy {
-  private readonly stringDecoder: StringDecoder = new StringDecoder();
+  private static readonly conexoesTcp = new Map<string, ISocket>();
+
   private readonly configuracao: IServidorTCPConfig;
-  private static conexoesTcp: Map<string, ISocket>;
-  private readonly separarMsgs: SepararMensagens;
+  private readonly conexoesAtivas = new Set<ISocket>();
   private readonly mensagensIncompletasPorSocket = new WeakMap<ISocket, string>();
+  private readonly processamentosPorSocket = new WeakMap<ISocket, Promise<void>>();
+  private readonly separarMsgs: SepararMensagens;
+  private encerrandoServidor = false;
   private servidor?: Net.Server;
 
   constructor(configuracao: IServidorTCPConfig) {
     super();
 
-    ServidorTcp.conexoesTcp = new Map();
     this.configuracao = configuracao;
-    this.separarMsgs  = new SepararMensagens(this.configuracao);
-
+    this.separarMsgs = new SepararMensagens(this.configuracao);
     this.initializeDeserializer(configuracao);
-    this.initializeSerializer(configuracao);
   }
 
   /**
    * @override
-  * */
-  public listen(callback: () => void) {
-    this.servidor = Net.createServer((socket: ISocket) => {
-      this.mensagem(socket);
-      this.conexaoErro(socket);
-      this.timeOut(socket);
-      this.clienteEncerrouConexao(socket);
-      this.qtdDispositivosConectados();
+   */
+  public listen(callback: () => void): void {
+    this.encerrandoServidor = false;
+    this.servidor = Net.createServer((socket: ISocket): void => {
+      this.configurarConexao(socket);
     });
 
-    const configuracao = this.configuracao.servidor;
-    this.servidor.listen(configuracao, callback);
+    this.servidor.listen(this.configuracao.servidor, callback);
   }
 
   /**
@@ -53,7 +44,10 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    */
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   public on(evento: string, callback: Function): void {
-    this.servidor?.on(evento, callback as unknown as (...args: unknown[]) => void);
+    this.servidor?.on(
+      evento,
+      callback as unknown as (...argumentos: unknown[]) => void,
+    );
   }
 
   /**
@@ -69,191 +63,269 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
   }
 
   /**
-   * Obtem a conexão, o socket do cliente que o imei representa.
+   * Obtém a conexão do cliente representado pelo IMEI.
    *
-   * @param {imei} imei
+   * @param {string} imei
    * @return {ISocket | null}
- */
+   */
   public static obterConexao(imei: string): ISocket | null {
-    const resposta = ServidorTcp.conexoesTcp.get(imei);
-    if (resposta === undefined) {
+    const conexao = ServidorTcp.conexoesTcp.get(imei);
+    if (conexao === undefined) {
       return null;
     }
 
-    return resposta;
+    if (conexao.destroyed) {
+      ServidorTcp.conexoesTcp.delete(imei);
+      return null;
+    }
+
+    return conexao;
   }
 
   /**
-   * Encerra o servidor TCP e limpa todas as conexões ativas.
+   * Encerra o servidor TCP e todas as conexões pertencentes a esta instância.
    *
    * @override
    */
   public close(): void {
-    if (this.servidor === undefined) {
-      return;
-    }
+    this.encerrandoServidor = true;
 
-    // Encerra todas as conexões ativas
-    for (const socket of ServidorTcp.conexoesTcp.values()) {
+    for (const socket of [...this.conexoesAtivas]) {
+      this.removerEstadoDaConexao(socket);
       socket.destroy();
     }
 
-    // Limpa o mapa de conexões
-    ServidorTcp.conexoesTcp.clear();
+    if (this.servidor?.listening === true) {
+      this.servidor.close();
+    }
+  }
 
-    // Encerra o servidor TCP
-    this.servidor.close();
+  private configurarConexao(socket: ISocket): void {
+    this.conexoesAtivas.add(socket);
+    this.mensagem(socket);
+    this.conexaoErro(socket);
+    this.timeOut(socket);
+    this.monitorarConexaoFechada(socket);
+    this.qtdDispositivosConectados();
   }
 
   /**
-   * Recebe a mensagem enviada pelo cliente.
+   * Recebe as mensagens enviadas pelo cliente e as processa na ordem de chegada.
    *
    * @param {ISocket} socket
    * @return {void}
    */
   private mensagem(socket: ISocket): void {
-    socket.on('data', (message: Buffer) => void (async () => {
-      for (const resposta of this.separarMensagensComBruto(message, socket)) {
-        const tcpContexto  = new TcpContext([
-          socket,
-          resposta.mensagem,
-          (imei: string) => ServidorTcp.obterConexao(imei),
-          resposta.mensagemBruta,
-        ]);
-        const msgFormatada = await this.deserializer.deserialize(resposta.mensagem);
-        const consumidor   = this.getHandlerByPattern(msgFormatada.pattern as string);
-
-        if (consumidor === null) {
-          const erro = 'Não há um consumidor para a mensagem';
-          this.configuracao.tratarErro.error(
-            `Class ServidorTcp ${erro} ${resposta.mensagem}`,
-          );
-
-          continue;
-        }
-
-        this.salvarConexao(socket, resposta.mensagem);
-        if (consumidor.isEventHandler === true) {
-          await this.eventPattern(tcpContexto, msgFormatada);
-        } else {
-          await this.messagePattern(tcpContexto, msgFormatada);
-        }
-      }
-    })());
-  }
-
-  private async messagePattern(tcpContexto: TcpContext, msgFormatada: MsgRecebida): Promise<void> {
-    const mensagem   = msgFormatada as IncomingRequest;
-    const consumidor = this.getHandlerByPattern(mensagem.pattern as string);
-    if (consumidor === null) {
-      return;
-    }
-
-    const response$  = this.transformToObservable(
-      await consumidor(mensagem.data, tcpContexto),
-    );
-
-    this.send(response$, (data) => {
-      Object.assign(data, { id: mensagem.id });
-      const outgoingResponse = this.serializer.serialize(
-        data as WritePacket & PacketId,
-      );
-
-      tcpContexto.getSocketRef()?.write(
-        Buffer.from(this.formatarResposta(outgoingResponse)),
-      );
+    this.conexoesAtivas.add(socket);
+    socket.on('data', (mensagemRecebida: Buffer): void => {
+      this.enfileirarProcessamento(socket, mensagemRecebida);
     });
   }
 
-  /**
-   * @param {TcpContext} tcpContexto
-   * @param {IncomingEvent} evento
-   * @return {Promise<void>}
-   */
-  private async eventPattern(tcpContexto: TcpContext, evento: IncomingEvent): Promise<void> {
-    await this.handleEvent(evento.pattern as string, evento, tcpContexto);
+  private enfileirarProcessamento(
+    socket: ISocket,
+    mensagemRecebida: Buffer,
+  ): void {
+    const processamentoAnterior = this.processamentosPorSocket.get(socket) ?? Promise.resolve();
+    const processamentoAtual = processamentoAnterior.then(async (): Promise<void> => {
+      await this.processarDadosRecebidos(socket, mensagemRecebida);
+    });
+    const processamentoProtegido = processamentoAtual.catch((erro: unknown): void => {
+      this.registrarErroProcessamento(erro);
+    });
+
+    this.processamentosPorSocket.set(socket, processamentoProtegido);
+  }
+
+  private async processarDadosRecebidos(
+    socket: ISocket,
+    mensagemRecebida: Buffer,
+  ): Promise<void> {
+    if (!this.conexoesAtivas.has(socket)) {
+      return;
+    }
+
+    const mensagens = this.separarMensagensComBruto(mensagemRecebida, socket);
+    for (const mensagemSeparada of mensagens) {
+      if (!this.conexoesAtivas.has(socket)) {
+        return;
+      }
+
+      await this.processarMensagemComTratamento(socket, mensagemSeparada);
+    }
+  }
+
+  private async processarMensagemComTratamento(
+    socket: ISocket,
+    mensagemSeparada: MensagemSeparada,
+  ): Promise<void> {
+    try {
+      await this.processarMensagem(socket, mensagemSeparada);
+    } catch (erro: unknown) {
+      this.registrarErroProcessamento(erro);
+    }
+  }
+
+  private async processarMensagem(
+    socket: ISocket,
+    mensagemSeparada: MensagemSeparada,
+  ): Promise<void> {
+    const evento = await this.deserializer.deserialize(
+      mensagemSeparada.mensagem,
+    ) as IncomingEvent;
+
+    if (!this.conexoesAtivas.has(socket)) {
+      return;
+    }
+
+    const consumidor = this.getHandlerByPattern(evento.pattern as string);
+    if (consumidor === null) {
+      this.registrarConsumidorAusente(mensagemSeparada.mensagem);
+      return;
+    }
+
+    if (consumidor.isEventHandler !== true) {
+      this.registrarConsumidorIncompativel(mensagemSeparada.mensagem);
+      return;
+    }
+
+    this.salvarConexao(socket, mensagemSeparada.mensagem);
+    const contexto = this.criarContexto(socket, mensagemSeparada);
+    await this.handleEvent(evento.pattern as string, evento, contexto);
+  }
+
+  private criarContexto(
+    socket: ISocket,
+    mensagemSeparada: MensagemSeparada,
+  ): TcpContext {
+    return new TcpContext([
+      socket,
+      mensagemSeparada.mensagem,
+      (imei: string): ISocket | null => ServidorTcp.obterConexao(imei),
+      mensagemSeparada.mensagemBruta,
+    ]);
+  }
+
+  private registrarConsumidorAusente(mensagem: string): void {
+    this.configuracao.tratarErro.error(
+      `Class ServidorTcp Não há um consumidor para a mensagem ${mensagem}`,
+    );
+  }
+
+  private registrarConsumidorIncompativel(mensagem: string): void {
+    this.configuracao.tratarErro.error(
+      `Class ServidorTcp O consumidor deve ser registrado com @EventPattern ${mensagem}`,
+    );
+  }
+
+  private registrarErroProcessamento(erro: unknown): void {
+    this.configuracao.tratarErro.error(
+      'ServidorTcp',
+      this.obterDescricaoErro(erro),
+    );
+  }
+
+  private obterDescricaoErro(erro: unknown): string {
+    if (erro instanceof Error) {
+      return erro.stack ?? erro.message;
+    }
+
+    return String(erro);
   }
 
   /**
-   * Em um intervalo de 10 minutos se não for transitado dados no socket
-   * é gerado um evento “timeout” informando que o socket está inativo,
-   * nesse momento o socket é encerrado.
+   * Em um intervalo de 10 minutos sem tráfego de dados, o socket é destruído.
    *
    * @param {ISocket} socket
    * @return {void}
    */
   private timeOut(socket: ISocket): void {
     socket.setTimeout(600000);
-    socket.on('timeout', () => {
-      this.clienteDesconectou(socket).catch((erro: unknown) => {
-        this.configuracao.tratarErro.error(erro);
+    socket.on('timeout', (): void => {
+      socket.destroy();
+    });
+  }
+
+  private monitorarConexaoFechada(socket: ISocket): void {
+    socket.once('close', (): void => {
+      void this.clienteDesconectou(socket).catch((erro: unknown): void => {
+        this.registrarErroProcessamento(erro);
       });
     });
   }
 
   /**
-   * Evento emitido quando o cliente encerra a conexão com o servidor TCP.
+   * Remove o cliente da lista de conexões ativas e emite CONEXAO_FECHADA.
    *
    * @param {ISocket} socket
-   * @return {void}
-   */
-  private clienteEncerrouConexao(socket: ISocket): void {
-    socket.on('end', () => {
-      this.clienteDesconectou(socket).catch((erro: unknown) => {
-        this.configuracao.tratarErro.error(erro);
-      });
-    });
-  }
-
-  /**
-   * Remove o cliente que se desconectou da lista de conexões ativas. Também emite um evento
-   * cujo o patter é "CONEXAO_FECHADA" caso haja um consumidor para esse evento.
-   *
-   * Exemplo evento emitido:
-   *  {pattern: 'CONEXAO_FECHADA', data: {imei: '000000001', dataHora: '2021-02-12T19:18:15.000Z'}}
-   *
-   * @param {ISocket} socket
-   * @return {void}
+   * @return {Promise<void>}
    */
   private async clienteDesconectou(socket: ISocket): Promise<void> {
-    this.descartarMensagemIncompleta(socket);
-
-    const imei: string = socket.imei ?? '';
-    const socketSalvo  = ServidorTcp.conexoesTcp.get(imei);
-    if ((socketSalvo?.id ?? null) === socket.id) {
-      ServidorTcp.conexoesTcp.delete(imei);
-
-      const tempo  = (new Date()).toISOString();
-      const evento = { pattern: Pattern.CONEXAO_FECHADA, data: { imei: imei, dataHora: tempo } };
-      const consumidorEvento = this.getHandlerByPattern(evento.pattern);
-      if (consumidorEvento?.isEventHandler) {
-        await this.handleEvent(evento.pattern, evento, {} as BaseRpcContext);
-      }
+    if (!this.conexoesAtivas.has(socket)) {
+      return;
     }
 
-    socket.end();
-    socket.destroy();
+    const imei = this.removerEstadoDaConexao(socket);
+    if (imei === null || this.encerrandoServidor) {
+      return;
+    }
+
+    await this.emitirEventoConexaoFechada(imei);
   }
 
-  /**
-   * "read ECONNRESET" significa que o cliente encerrou abruptamente sua conexão.
-   *
-   * @param {ISocket} socket
-   * @return {void}
-   */
-  private conexaoErro(socket: ISocket): void {
-    socket.on('error', (error) => {
-      if (error.message === 'read ECONNRESET') {
-        this.clienteDesconectou(socket).catch((erro: unknown) => {
-          this.configuracao.tratarErro.error(erro);
-        });
-      }
+  private removerEstadoDaConexao(socket: ISocket): string | null {
+    this.conexoesAtivas.delete(socket);
+    this.processamentosPorSocket.delete(socket);
+    this.descartarMensagemIncompleta(socket);
 
-      if (error.message !== 'read ECONNRESET') {
+    const imei = socket.imei;
+    if (imei === undefined) {
+      return null;
+    }
+
+    const conexaoRegistrada = ServidorTcp.conexoesTcp.get(imei);
+    if (conexaoRegistrada !== undefined && conexaoRegistrada !== socket) {
+      return null;
+    }
+
+    if (conexaoRegistrada === socket) {
+      ServidorTcp.conexoesTcp.delete(imei);
+    }
+
+    return imei;
+  }
+
+  private async emitirEventoConexaoFechada(imei: string): Promise<void> {
+    const evento: IncomingEvent = {
+      pattern: Pattern.CONEXAO_FECHADA,
+      data   : {
+        imei,
+        dataHora: new Date().toISOString(),
+      },
+    };
+    const consumidor = this.getHandlerByPattern(evento.pattern as string);
+    if (consumidor?.isEventHandler !== true) {
+      return;
+    }
+
+    await this.handleEvent(
+      evento.pattern as string,
+      evento,
+      new BaseRpcContext([]),
+    );
+  }
+
+  private conexaoErro(socket: ISocket): void {
+    socket.on('error', (erro: Error): void => {
+      const codigoErro = (erro as NodeJS.ErrnoException).code;
+      if (codigoErro !== 'ECONNRESET') {
         this.configuracao.tratarErro.error(
-          'ServidorTcp', error.stack ?? error.message,
+          'ServidorTcp',
+          erro.stack ?? erro.message,
         );
       }
+
+      socket.destroy();
     });
   }
 
@@ -263,131 +335,83 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
    * @return {void}
    */
   private salvarConexao(conexao: ISocket, mensagem: string): void {
-    const rastreadorImei = this.configuracao.deserializer.obterImei(mensagem);
-    if (!conexao.imei && rastreadorImei) {
-      ServidorTcp.conexoesTcp.set(rastreadorImei, conexao);
+    if (!this.conexoesAtivas.has(conexao) || conexao.destroyed) {
+      return;
+    }
 
+    const rastreadorImei = this.configuracao.deserializer.obterImei(mensagem);
+    if (conexao.imei === undefined && rastreadorImei !== '') {
+      ServidorTcp.conexoesTcp.set(rastreadorImei, conexao);
       conexao.imei = rastreadorImei;
-      conexao.id   = Symbol();
+      conexao.id = Symbol();
     }
   }
 
   /**
-   * Formata uma resposta que será enviada a um microserviço NestJs.
-   * A resposta deve conter como sufixo seu tamanho seguido do
-   * caracter #.
-   *
-   * @param {any} mensagem
-   * @return {string}
-   */
-  private formatarResposta(mensagem: any): string {
-    const messageString  = JSON.stringify(mensagem);
-    const tamanhoMensagm = messageString.length;
-    return `${tamanhoMensagm.toString()}#${messageString}`;
-  }
-
-  /**
-   * Obtém de forma assíncrona o número de conexões simultâneas no servidor.
-   *
-   * Sempre que um novo dispositivo se conectar ao servidor esse método será executado e um evento será emitido
-   * caso tenha um consumidor registrado para o patter "QTD_DISPOSITIVOS_CONECTADOS".
-   *
-   * Exemplo evento emitido:
-   *  {pattern: 'QTD_DISPOSITIVOS_CONECTADOS', data: {qtd: 3000, dataHora: '2021-02-12T19:18:15.000Z'}}
+   * Emite a quantidade atual de conexões sempre que um dispositivo se conecta.
    *
    * @return {void}
    */
   private qtdDispositivosConectados(): void {
-    this.servidor?.getConnections((error, quantidade) => {
-      if (error) {
-        this.configuracao.tratarErro.error(error);
+    this.servidor?.getConnections((erro: Error | null, quantidade: number): void => {
+      if (erro !== null) {
+        this.configuracao.tratarErro.error(erro);
         return;
       }
 
-      const tempo  = (new Date()).toISOString();
-      const evento = { pattern: Pattern.QTD_DISPOSITIVOS_CONECTADOS, data: { qtd: quantidade, dataHora: tempo } };
-      const consumidorEvento = this.getHandlerByPattern(evento.pattern);
-      if (consumidorEvento?.isEventHandler) {
-        this.handleEvent(evento.pattern, evento, {} as BaseRpcContext)
-          .catch((erro: unknown) => {
-            this.configuracao.tratarErro.error(erro);
-          });
+      const evento: IncomingEvent = {
+        pattern: Pattern.QTD_DISPOSITIVOS_CONECTADOS,
+        data   : {
+          qtd     : quantidade,
+          dataHora: new Date().toISOString(),
+        },
+      };
+      const consumidor = this.getHandlerByPattern(evento.pattern as string);
+      if (consumidor?.isEventHandler !== true) {
+        return;
       }
+
+      this.handleEvent(
+        evento.pattern as string,
+        evento,
+        new BaseRpcContext([]),
+      ).catch((erroEvento: unknown): void => {
+        this.registrarErroProcessamento(erroEvento);
+      });
     });
   }
 
   /**
-   * TCP Receive Segment Coalescing (RSC).
-   *
-   * O protocolo TCP pode pegar várias mensagens enviadas em uma mesma conexão e
-   * concatená-las em uma só mensagem. As mensagens recebidas devem ser verificadas e
-   * tratadas.
-   *
-   * Os modelos dos rastreadores Coban que essa integração dá suporte não apresentam um padrão
-   * para início das mensagens, a maioria das mensagens começam com o valor "imei:" mas existem
-   * exceções, tem mensagens que começam com o valor "##", outras que contêm apenas o valor numérico
-   * representado o imei.
-   *
-   * Se a mensagem começar com o valor "imei:", deve ser verificado se foram passadas mais de uma mensagens
-   * concatenadas, nos demais casos esse verificação não é necessaria.
+   * Separa mensagens concatenadas enviadas pelos rastreadores.
    *
    * @param {Buffer} mensagem
    * @return {string[]}
-  */
+   */
   public separarMensagens(mensagem: Buffer): string[] {
     return this.separarMensagensComBruto(mensagem)
       .map((mensagemSeparada: MensagemSeparada): string => mensagemSeparada.mensagem);
   }
 
-  /**
-   * @param {Buffer} mensagem
-   * @return {MensagemSeparada[]}
-  */
   private separarMensagensComBruto(
     mensagem: Buffer,
     socket?: ISocket,
   ): MensagemSeparada[] {
-    // Mensagens enviadas por uma aplicação Nest
-    let mensagemString = this.stringDecoder.write(mensagem);
-    const quantidadeMenagem = (mensagemString.match(/\d+#{/g) ?? []).length;
-    if (quantidadeMenagem > 0) {
-      const arrayMensagens: MensagemSeparada[] = [];
-
-      for (let _i = 0; _i < quantidadeMenagem; _i++) {
-        const posicaoDelimitador = mensagemString.indexOf('#');
-        const msgSemDelimidador  = mensagemString.substring(posicaoDelimitador + 1);
-        const tamanhoMensagem    = parseInt(mensagemString.substring(0, posicaoDelimitador), 10);
-
-        if (!isNaN(tamanhoMensagem)) {
-          const mensagemSeparada = msgSemDelimidador.substring(0, tamanhoMensagem);
-          arrayMensagens.push({
-            mensagem     : mensagemSeparada,
-            mensagemBruta: mensagemSeparada,
-          });
-          mensagemString = msgSemDelimidador.substring(tamanhoMensagem);
-        }
-      }
-
-      return arrayMensagens;
+    const mensagemRecebida = mensagem.toString(this.configuracao.codificacaoMsg);
+    if (socket !== undefined) {
+      return this.separarMensagensMantendoEstadoDoSocket(
+        socket,
+        mensagemRecebida,
+      );
     }
 
-    // Mensagens enviadas pelos rastreadores
-    if (socket !== undefined && this.separarMsgs.possuiDelimitadorSimetrico()) {
-      return this.separarMensagensComDelimitadorSimetrico(socket, mensagem);
-    }
-
-    const codificacao = this.configuracao.codificacaoMsg;
-    const demaisMsg   = mensagem.toString(codificacao);
-
-    return this.separarMsgs.obterMensagensComBruto(demaisMsg);
+    return this.separarMsgs.obterMensagensComBruto(mensagemRecebida);
   }
 
-  private separarMensagensComDelimitadorSimetrico(
+  private separarMensagensMantendoEstadoDoSocket(
     socket: ISocket,
-    mensagem: Buffer,
+    mensagemRecebida: string,
   ): MensagemSeparada[] {
     const mensagemPendente = this.mensagensIncompletasPorSocket.get(socket) ?? '';
-    const mensagemRecebida = mensagem.toString(this.configuracao.codificacaoMsg);
     const resultado = this.separarMsgs.obterResultadoSeparacao(
       `${mensagemPendente}${mensagemRecebida}`,
     );

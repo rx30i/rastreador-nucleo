@@ -1,5 +1,5 @@
 /* eslint-disable max-len */
-import { IncomingRequest, IncomingEvent } from '@nestjs/microservices';
+import { IncomingEvent } from '@nestjs/microservices';
 import { SepararMensagens } from './separar-mensagens';
 import { IConsumerDeserializer, IServidorTCPConfig } from '../../contracts';
 import { CodificacaoMsg } from '../../enums';
@@ -11,10 +11,9 @@ class Deserializer implements IConsumerDeserializer {
   }
 
   public deserialize(
-    _value: any,
-    _options?: Record<string, any>,
-  ):
-    IncomingRequest | IncomingEvent | Promise<IncomingRequest | IncomingEvent> {
+    _value: unknown,
+    _options?: Record<string, unknown>,
+  ): IncomingEvent {
     throw new Error('Method not implemented.');
   }
 }
@@ -163,6 +162,74 @@ describe('SepararMensagens', () => {
     });
   });
 
+  describe('Metodo obterResultadoSeparacao() usando prefixo e sufixo distintos', () => {
+    const separadorPrefixosAlternativos = criarSeparadorMensagens({
+      prefixo: ['7878', '7979'],
+      sufixo : '0d0a',
+    });
+
+    it('Retem quadro iniciado por prefixo conhecido enquanto o sufixo nao chega', () => {
+      const quadroIncompleto = '7878010203';
+
+      expect(
+        separadorPrefixosAlternativos.obterResultadoSeparacao(
+          quadroIncompleto,
+        ),
+      ).toEqual({
+        mensagens         : [],
+        mensagemIncompleta: quadroIncompleto,
+      });
+    });
+
+    it('Retem inicio parcial de prefixo recebido no fim da entrada', () => {
+      const inicioParcialPrefixo = '79';
+
+      expect(
+        separadorPrefixosAlternativos.obterResultadoSeparacao(
+          inicioParcialPrefixo,
+        ),
+      ).toEqual({
+        mensagens         : [],
+        mensagemIncompleta: inicioParcialPrefixo,
+      });
+    });
+
+    it('Retorna quadros completos e preserva a sobra incompleta com a caixa original', () => {
+      const quadroCompleto = '787801020D0A';
+      const quadroIncompleto = '79790304';
+
+      expect(
+        separadorPrefixosAlternativos.obterResultadoSeparacao(
+          `${quadroCompleto}${quadroIncompleto}`,
+        ),
+      ).toEqual({
+        mensagens: [
+          {
+            mensagem     : quadroCompleto.toLowerCase(),
+            mensagemBruta: quadroCompleto,
+          },
+        ],
+        mensagemIncompleta: quadroIncompleto,
+      });
+    });
+
+    it('Propaga integralmente entrada iniciada por prefixo desconhecido', () => {
+      const mensagem = '999901020d0a';
+
+      expect(
+        separadorPrefixosAlternativos.obterResultadoSeparacao(mensagem),
+      ).toEqual({
+        mensagens: [
+          {
+            mensagem,
+            mensagemBruta: mensagem,
+          },
+        ],
+        mensagemIncompleta: '',
+      });
+    });
+  });
+
   describe('Metodo obterMensagens() usando prefixo para separar as mensagens', () => {
     it('Recebe uma mensagem valida e retorna um array contendo a mensagem', () => {
       const mensagem = '78780d01086266708570797900007ea40d0a';
@@ -273,7 +340,7 @@ describe('SepararMensagens', () => {
       });
       const mensagem = '78780d01086266708570787800007ea40d0a';
 
-      expect(prefixosVazios.obterMensagens(mensagem)).toEqual([]);
+      expect(prefixosVazios.obterMensagens(mensagem)).toEqual([mensagem]);
     });
 
     it('Recebe array apenas com prefixos vazios e deve separar mensagens pelo sufixo informado', () => {
@@ -319,6 +386,53 @@ describe('SepararMensagens', () => {
       ];
 
       expect(sufixo.obterMensagens(mensagem)).toEqual(resposta);
+    });
+  });
+
+  describe('Metodo obterMensagens() sem delimitadores configurados', () => {
+    it('Deve propagar a entrada nao vazia como uma unica mensagem', () => {
+      const separadorSemDelimitadores = criarSeparadorMensagens();
+      const mensagem = 'ASTT;0360000001;000007;26;010;1\r';
+
+      expect(separadorSemDelimitadores.obterMensagens(mensagem)).toEqual([
+        mensagem.toLowerCase(),
+      ]);
+    });
+
+    it('Deve preservar a mensagem bruta e normalizar a mensagem entregue', () => {
+      const separadorSemDelimitadores = criarSeparadorMensagens();
+      const mensagem = 'ASTT;0360000001;000007;26;010;1\r';
+
+      expect(
+        separadorSemDelimitadores.obterMensagensComBruto(mensagem),
+      ).toEqual([
+        {
+          mensagem     : mensagem.toLowerCase(),
+          mensagemBruta: mensagem,
+        },
+      ]);
+    });
+
+    it('Deve tratar prefixos e sufixo vazios como delimitadores nao configurados', () => {
+      const separadorSemDelimitadores = criarSeparadorMensagens({
+        prefixo: ['', ''],
+        sufixo : '',
+      });
+      const mensagem = 'MENSAGEM';
+
+      expect(separadorSemDelimitadores.obterMensagens(mensagem)).toEqual([
+        mensagem.toLowerCase(),
+      ]);
+    });
+
+    it('Nao deve propagar mensagem vazia', () => {
+      const separadorSemDelimitadores = criarSeparadorMensagens({
+        prefixo: [],
+        sufixo : '',
+      });
+
+      expect(separadorSemDelimitadores.obterMensagens('')).toEqual([]);
+      expect(separadorSemDelimitadores.obterMensagensComBruto('')).toEqual([]);
     });
   });
 });
