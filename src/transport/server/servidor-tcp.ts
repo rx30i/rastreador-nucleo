@@ -1,13 +1,8 @@
-import {
-  BaseRpcContext,
-  CustomTransportStrategy,
-  IncomingEvent,
-  Server,
-} from '@nestjs/microservices';
-import { IServidorTCPConfig, ISocket } from '../../contracts';
-import { Pattern } from '../../enums';
-import { TcpContext } from '../ctx-host';
+import { BaseRpcContext, CustomTransportStrategy, IncomingEvent, Server } from '@nestjs/microservices';
 import { SepararMensagens, type MensagemSeparada } from './separar-mensagens';
+import { IServidorTCPConfig, ISocket } from '../../contracts';
+import { TcpContext } from '../ctx-host';
+import { Pattern } from '../../enums';
 import * as Net from 'node:net';
 
 export class ServidorTcp extends Server implements CustomTransportStrategy {
