@@ -54,7 +54,7 @@ export class SepararMensagens {
   public obterResultadoSeparacao(
     mensagem: string,
   ): IResultadoSeparacaoMensagens {
-    if (!mensagem || typeof mensagem !== 'string' || mensagem.length === 0) {
+    if (mensagem.length === 0) {
       return {
         mensagens         : [],
         mensagemIncompleta: '',
@@ -71,6 +71,14 @@ export class SepararMensagens {
       );
     }
 
+    if (prefixos.length > 0 && sufixo.length > 0) {
+      return this.separarMensagensPeloPrefixoSufixo(
+        mensagem,
+        prefixos,
+        sufixo,
+      );
+    }
+
     return {
       mensagens         : this.obterMensagensPelaConfiguracao(mensagem, prefixos, sufixo),
       mensagemIncompleta: '',
@@ -82,10 +90,6 @@ export class SepararMensagens {
     prefixos: string[],
     sufixo: string,
   ): MensagemSeparada[] {
-    if (prefixos.length > 0 && sufixo.length > 0) {
-      return this.separarMsgPeloPrefixoSufixo(mensagem, prefixos, sufixo);
-    }
-
     if (prefixos.length > 0) {
       return this.separarMsgPeloPrefixo(mensagem, prefixos);
     }
@@ -94,7 +98,9 @@ export class SepararMensagens {
       return this.separarMsgPeloSufixo(mensagem, sufixo);
     }
 
-    return [];
+    return [
+      this.criarMensagemSeparada(mensagem.toLowerCase(), mensagem),
+    ];
   }
 
   private configuracaoPossuiDelimitadorSimetrico(
@@ -279,13 +285,13 @@ export class SepararMensagens {
    * @param  {string} mensagem
    * @param  {string[]} prefixos
    * @param  {string} sufixo
-   * @return {MensagemSeparada[]}
+   * @return {IResultadoSeparacaoMensagens}
    */
-  private separarMsgPeloPrefixoSufixo(
+  private separarMensagensPeloPrefixoSufixo(
     mensagem: string,
     prefixos: string[],
     sufixo: string,
-  ): MensagemSeparada[] {
+  ): IResultadoSeparacaoMensagens {
     const mensagens: MensagemSeparada[] = [];
     const prefixosOrdenados = this.ordenarPrefixosPorTamanho(prefixos);
     const mensagemNormalizada = mensagem.toLowerCase();
@@ -298,7 +304,13 @@ export class SepararMensagens {
         posicaoInicial,
       );
       if (prefixo === undefined) {
-        break;
+        return this.criarResultadoSemPrefixoCompleto(
+          mensagem,
+          mensagemNormalizada,
+          prefixosOrdenados,
+          posicaoInicial,
+          mensagens,
+        );
       }
 
       const posicaoSufixo = mensagemNormalizada.indexOf(
@@ -306,7 +318,10 @@ export class SepararMensagens {
         posicaoInicial + prefixo.length,
       );
       if (posicaoSufixo === -1) {
-        break;
+        return {
+          mensagens,
+          mensagemIncompleta: mensagem.substring(posicaoInicial),
+        };
       }
 
       const fimMensagem = posicaoSufixo + sufixo.length;
@@ -322,11 +337,44 @@ export class SepararMensagens {
       );
     }
 
+    return {
+      mensagens,
+      mensagemIncompleta: '',
+    };
+  }
+
+  private criarResultadoSemPrefixoCompleto(
+    mensagem: string,
+    mensagemNormalizada: string,
+    prefixos: string[],
+    posicaoInicial: number,
+    mensagens: MensagemSeparada[],
+  ): IResultadoSeparacaoMensagens {
+    const mensagemRestante = mensagemNormalizada.substring(posicaoInicial);
+    if (this.podeSerInicioDePrefixo(mensagemRestante, prefixos)) {
+      return {
+        mensagens,
+        mensagemIncompleta: mensagem.substring(posicaoInicial),
+      };
+    }
+
     if (mensagens.length === 0) {
       mensagens.push(this.criarMensagemSeparada(mensagemNormalizada, mensagem));
     }
 
-    return mensagens;
+    return {
+      mensagens,
+      mensagemIncompleta: '',
+    };
+  }
+
+  private podeSerInicioDePrefixo(
+    mensagem: string,
+    prefixos: string[],
+  ): boolean {
+    return prefixos.some((prefixo: string): boolean =>
+      prefixo.startsWith(mensagem),
+    );
   }
 
   /**

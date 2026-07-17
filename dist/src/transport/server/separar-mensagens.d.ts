@@ -21,7 +21,9 @@ export declare class SepararMensagens {
     private obterSufixoNormalizado;
     private separarMsgPeloPrefixo;
     private separarMsgPeloSufixo;
-    private separarMsgPeloPrefixoSufixo;
+    private separarMensagensPeloPrefixoSufixo;
+    private criarResultadoSemPrefixoCompleto;
+    private podeSerInicioDePrefixo;
     private ordenarPrefixosPorTamanho;
     private obterPosicoesDosPrefixos;
     private obterPrefixoNaPosicao;

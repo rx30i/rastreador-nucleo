@@ -1,11 +1,12 @@
 ## Servidor TCP customizado (ServidorTcp)
 
-A classe `ServidorTcp` é uma implementação customizada de transporte TCP para o NestJS, permitindo criar servidores TCP onde clientes podem se conectar e enviar mensagens. Ela implementa a interface `CustomTransportStrategy` do NestJS.
+A classe `ServidorTcp` é uma implementação customizada de transporte TCP para o NestJS, permitindo criar servidores TCP onde rastreadores podem se conectar e enviar mensagens. Ela implementa a interface `CustomTransportStrategy` e despacha exclusivamente eventos registrados com `@EventPattern`.
 
 
 ### Características
 
 - Servidor TCP compatível com o padrão de microserviços do NestJS
+- Despacho exclusivo de eventos com `@EventPattern`
 - Suporte a separação de mensagens concatenadas (TCP Receive Segment Coalescing)
 - Gerenciamento de conexões ativas por IMEI
 - Eventos automáticos para conexões fechadas e quantidade de dispositivos conectados
@@ -33,7 +34,6 @@ async function bootstrap () {
     strategy: new ServidorTcp({
       deserializer  : new Deserializer(),
       codificacaoMsg: CodificacaoMsg.HEX,
-      delimitadorMsg: '',
       prefixo       : ['7878', '7979'],
       sufixo        : '0d0a',
       tratarErro    : logger,
@@ -58,13 +58,12 @@ bootstrap();
 | Propriedade | Tipo | Obrigatório | Descrição |
 |-------------|------|-------------|-----------|
 | `deserializer` | `IConsumerDeserializer` | Sim | Deserializador para converter mensagens recebidas |
-| `serializer` | `Serializer` | Não | Serializador para formatar respostas |
 | `servidor.path` | `string` | Sim | Endereço IP do servidor |
 | `servidor.port` | `number` | Sim | Porta do servidor |
 | `tratarErro` | `LoggerService` | Sim | Logger para tratamento de erros |
 | `codificacaoMsg` | `CodificacaoMsg` | Sim | Codificação das mensagens (`ascii` ou `hex`) |
-| `prefixo` | `string \| string[]` | Não | Prefixo ou prefixos alternativos para identificar início das mensagens |
-| `sufixo` | `string` | Não | Sufixo para identificar fim das mensagens |
+| `prefixo` | `string \| string[]` | Não | Prefixo ou prefixos alternativos para identificar início das mensagens; vazio equivale a não configurado |
+| `sufixo` | `string` | Não | Sufixo para identificar fim das mensagens; vazio equivale a não configurado |
 
 ### Métodos Principais
 
@@ -72,7 +71,7 @@ bootstrap();
 Inicia o servidor TCP e executa o callback quando estiver pronto.
 
 #### `close()`
-Encerra o servidor TCP e destrói todas as conexões ativas.
+Encerra o servidor TCP e destrói todas as conexões pertencentes à instância, inclusive as que ainda não tiveram IMEI reconhecido. Conexões mantidas por outras instâncias não são removidas.
 
 #### `unwrap<T = Net.Server>(): T`
 Retorna o servidor TCP nativo do Node.js para acesso a funcionalidades específicas.
@@ -221,20 +220,23 @@ if (socket) {
 }
 ```
 
+O comando é escrito como `Buffer` bruto, exatamente no protocolo do rastreador, sem envelope ou framing adicional. A confirmação enviada pelo equipamento retorna como uma mensagem normal do protocolo do rastreador e é encaminhada a um controller com `@EventPattern`.
+
 ### Separação de Mensagens
 
-O servidor trata automaticamente mensagens concatenadas pelo protocolo TCP:
+O servidor trata mensagens de rastreadores concatenadas pelo protocolo TCP usando o `prefixo` e/ou o `sufixo` configurados.
 
-1. **Mensagens no formato NestJS**: `tamanho#mensagem` (ex: `25#{"pattern":"teste"}`)
-2. **Mensagens de rastreadores**: Separadas por `prefixo` e/ou `sufixo` configurados
+Quando `prefixo` receber um array, cada item será tratado como um prefixo alternativo válido.
 
-Quando `prefixo` receber um array, cada item será tratado como um prefixo alternativo válido. Exemplo:
+Quando nenhum delimitador válido estiver configurado — inclusive `prefixo: []`, prefixos vazios ou `sufixo: ''` — cada entrada TCP não vazia é encaminhada integralmente como uma única mensagem. A versão usada no roteamento é normalizada, enquanto `TcpContext.mensagemBruta()` preserva o conteúdo original. Uma entrada vazia não produz evento.
 
-#### Delimitador simétrico
+#### Prefixo e sufixo
 
-Quando houver um único `prefixo` igual ao `sufixo`, como `7e` em protocolos JT/T 808, o servidor considera o primeiro delimitador como abertura e procura o próximo como fechamento. Quadros concatenados são entregues separadamente, com os dois delimitadores preservados.
+Quando houver ao menos um `prefixo` e um `sufixo` não vazios, o servidor trata os dados recebidos como um fluxo contínuo. Um quadro ou o próprio prefixo pode chegar em mais de um evento `data`; nesse caso, a parte incompleta é mantida somente no socket de origem, concatenada ao próximo evento e encaminhada ao deserializador apenas depois que o sufixo for encontrado.
 
-Em uma conexão TCP, um quadro pode chegar em mais de um evento `data`. Nessa configuração, o servidor mantém a parte iniciada e sem delimitador final apenas naquele socket; ela é concatenada ao próximo evento e só é encaminhada ao deserializador depois de completa. Se a conexão for encerrada antes do fechamento, o quadro truncado é descartado e registrado no logger configurado.
+Se uma entrada contiver quadros completos seguidos pelo início de outro quadro, somente os quadros completos serão processados imediatamente. A sobra permanece pendente até a chegada do restante. Se a conexão for encerrada antes do fechamento do quadro, a parte truncada é descartada e registrada no logger configurado.
+
+Exemplo:
 
 ```typescript
 new ServidorTcp({
@@ -249,3 +251,7 @@ new ServidorTcp({
   },
 });
 ```
+
+#### Delimitador simétrico
+
+Quando houver um único `prefixo` igual ao `sufixo`, como `7e` em protocolos JT/T 808, o servidor considera o primeiro delimitador como abertura e procura o próximo como fechamento. Quadros concatenados são entregues separadamente, com os dois delimitadores preservados.

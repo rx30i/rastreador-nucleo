@@ -45,6 +45,8 @@ describe('EnviarComandoRastreadorService', () => {
 
     servico.enviarComando(mensagem, comando);
 
+    expect(socket.write).toHaveBeenCalledTimes(1);
+    expect(socket.write).toHaveBeenCalledWith(comando);
     expect(logger.salvarLogRastreador).toHaveBeenCalledWith(
       '123456789012345',
       'ST300CMD;123456789012345;02;Enable1',
