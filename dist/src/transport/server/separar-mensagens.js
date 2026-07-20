@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SepararMensagens = void 0;
+const enums_1 = require("../../enums");
 class SepararMensagens {
     servidorTCPConfig;
     constructor(servidorTCPConfig) {
@@ -75,7 +76,7 @@ class SepararMensagens {
                     mensagemIncompleta: '',
                 };
             }
-            const posicaoSufixo = mensagemNormalizada.indexOf(delimitador, posicaoInicial + delimitador.length);
+            const posicaoSufixo = this.obterPosicaoDelimitador(mensagemNormalizada, delimitador, posicaoInicial + delimitador.length);
             if (posicaoSufixo === -1) {
                 return {
                     mensagens,
@@ -134,18 +135,15 @@ class SepararMensagens {
     separarMsgPeloSufixo(mensagem, sufixo) {
         const mensagens = [];
         const mensagemNormalizada = mensagem.toLowerCase();
-        if (!mensagemNormalizada.includes(sufixo)) {
-            return mensagens;
-        }
         let posicaoInicial = 0;
-        let posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
+        let posicaoSufixo = this.obterPosicaoDelimitador(mensagemNormalizada, sufixo, posicaoInicial);
         while (posicaoSufixo !== -1) {
             const fimMensagem = posicaoSufixo + sufixo.length;
             const mensagemCompleta = mensagemNormalizada.substring(posicaoInicial, fimMensagem);
             const mensagemBruta = mensagem.substring(posicaoInicial, fimMensagem);
             mensagens.push(this.criarMensagemSeparada(this.removerQuebrasDeLinha(mensagemCompleta), mensagemBruta));
             posicaoInicial = fimMensagem;
-            posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
+            posicaoSufixo = this.obterPosicaoDelimitador(mensagemNormalizada, sufixo, posicaoInicial);
         }
         return mensagens;
     }
@@ -159,7 +157,7 @@ class SepararMensagens {
             if (prefixo === undefined) {
                 return this.criarResultadoSemPrefixoCompleto(mensagem, mensagemNormalizada, prefixosOrdenados, posicaoInicial, mensagens);
             }
-            const posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial + prefixo.length);
+            const posicaoSufixo = this.obterPosicaoDelimitador(mensagemNormalizada, sufixo, posicaoInicial + prefixo.length);
             if (posicaoSufixo === -1) {
                 return {
                     mensagens,
@@ -214,7 +212,22 @@ class SepararMensagens {
         return posicoes;
     }
     obterPrefixoNaPosicao(mensagem, prefixos, posicao) {
+        if (!this.posicaoDelimitadorEstaAlinhada(posicao)) {
+            return undefined;
+        }
         return prefixos.find((prefixo) => mensagem.startsWith(prefixo, posicao));
+    }
+    obterPosicaoDelimitador(mensagem, delimitador, posicaoInicial) {
+        let posicaoDelimitador = mensagem.indexOf(delimitador, posicaoInicial);
+        while (posicaoDelimitador !== -1 &&
+            !this.posicaoDelimitadorEstaAlinhada(posicaoDelimitador)) {
+            posicaoDelimitador = mensagem.indexOf(delimitador, posicaoDelimitador + 1);
+        }
+        return posicaoDelimitador;
+    }
+    posicaoDelimitadorEstaAlinhada(posicao) {
+        return (this.servidorTCPConfig.codificacaoMsg !== enums_1.CodificacaoMsg.HEX ||
+            posicao % 2 === 0);
     }
     removerQuebrasDeLinha(mensagem) {
         return mensagem.replace(/(\r\n|\n|\r)/gm, '');

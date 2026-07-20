@@ -251,6 +251,8 @@ O servidor trata mensagens de rastreadores concatenadas pelo protocolo TCP usand
 
 Quando `prefixo` receber um array, cada item será tratado como um prefixo alternativo válido.
 
+Em `CodificacaoMsg.HEX`, prefixos e sufixos são reconhecidos somente no início de um byte, isto é, em posições pares da representação hexadecimal. Sequências formadas entre o segundo caractere de um byte e o primeiro caractere do byte seguinte não são tratadas como delimitadores.
+
 Quando nenhum delimitador válido estiver configurado — inclusive `prefixo: []`, prefixos vazios ou `sufixo: ''` — cada entrada TCP não vazia é encaminhada integralmente como uma única mensagem. A versão usada no roteamento é normalizada, enquanto `TcpContext.mensagemBruta()` preserva o conteúdo original. Uma entrada vazia não produz evento.
 
 #### Prefixo e sufixo

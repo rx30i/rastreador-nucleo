@@ -61,6 +61,12 @@ describe('SepararMensagens', () => {
       expect(prefixoSufixo.obterMensagens(mensagem)).toEqual(resposta);
     });
 
+    it('Ignora sufixo hexadecimal formado entre dois bytes', () => {
+      const mensagem = '787810d0a20d0a';
+
+      expect(prefixoSufixo.obterMensagens(mensagem)).toEqual([mensagem]);
+    });
+
     it('Recebe uma mensagem com prefixo invalido e deve retorna um array contento a mensagem recebida', () => {
       const mensagem = '78770d01086266708570787800007ea40d0a';
       expect(prefixoSufixo.obterMensagens(mensagem)).toEqual([
@@ -128,6 +134,18 @@ describe('SepararMensagens', () => {
       ).toEqual([
         quadroHeartbeat.toLowerCase(),
         quadroDesregistro.toLowerCase(),
+      ]);
+    });
+
+    it('Ignora delimitador hexadecimal formado entre dois bytes', () => {
+      const separadorDelimitadorIgual = criarSeparadorMensagens({
+        prefixo: '7e',
+        sufixo : '7e',
+      });
+      const quadro = '7e0147e2027e';
+
+      expect(separadorDelimitadorIgual.obterMensagens(quadro)).toEqual([
+        quadro,
       ]);
     });
   });
@@ -254,6 +272,12 @@ describe('SepararMensagens', () => {
       ];
 
       expect(prefixo.obterMensagens(mensagem)).toEqual(resposta);
+    });
+
+    it('Ignora prefixo hexadecimal formado entre dois bytes', () => {
+      const mensagem = '7878178782';
+
+      expect(prefixo.obterMensagens(mensagem)).toEqual([mensagem]);
     });
   });
 

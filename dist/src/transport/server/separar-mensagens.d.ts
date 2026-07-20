@@ -27,6 +27,8 @@ export declare class SepararMensagens {
     private ordenarPrefixosPorTamanho;
     private obterPosicoesDosPrefixos;
     private obterPrefixoNaPosicao;
+    private obterPosicaoDelimitador;
+    private posicaoDelimitadorEstaAlinhada;
     private removerQuebrasDeLinha;
     private criarMensagemSeparada;
 }

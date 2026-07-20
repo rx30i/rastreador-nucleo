@@ -1,4 +1,5 @@
 import { IServidorTCPConfig } from '../../contracts';
+import { CodificacaoMsg } from '../../enums';
 
 export interface MensagemSeparada {
   mensagem: string;
@@ -135,7 +136,8 @@ export class SepararMensagens {
         };
       }
 
-      const posicaoSufixo = mensagemNormalizada.indexOf(
+      const posicaoSufixo = this.obterPosicaoDelimitador(
+        mensagemNormalizada,
         delimitador,
         posicaoInicial + delimitador.length,
       );
@@ -253,12 +255,12 @@ export class SepararMensagens {
     const mensagens: MensagemSeparada[] = [];
     const mensagemNormalizada = mensagem.toLowerCase();
 
-    if (!mensagemNormalizada.includes(sufixo)) {
-      return mensagens;
-    }
-
     let posicaoInicial = 0;
-    let posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
+    let posicaoSufixo = this.obterPosicaoDelimitador(
+      mensagemNormalizada,
+      sufixo,
+      posicaoInicial,
+    );
     while (posicaoSufixo !== -1) {
       const fimMensagem = posicaoSufixo + sufixo.length;
       const mensagemCompleta = mensagemNormalizada.substring(
@@ -275,7 +277,11 @@ export class SepararMensagens {
       );
 
       posicaoInicial = fimMensagem;
-      posicaoSufixo = mensagemNormalizada.indexOf(sufixo, posicaoInicial);
+      posicaoSufixo = this.obterPosicaoDelimitador(
+        mensagemNormalizada,
+        sufixo,
+        posicaoInicial,
+      );
     }
 
     return mensagens;
@@ -313,7 +319,8 @@ export class SepararMensagens {
         );
       }
 
-      const posicaoSufixo = mensagemNormalizada.indexOf(
+      const posicaoSufixo = this.obterPosicaoDelimitador(
+        mensagemNormalizada,
         sufixo,
         posicaoInicial + prefixo.length,
       );
@@ -429,8 +436,36 @@ export class SepararMensagens {
     prefixos: string[],
     posicao: number,
   ): string | undefined {
+    if (!this.posicaoDelimitadorEstaAlinhada(posicao)) {
+      return undefined;
+    }
+
     return prefixos.find((prefixo: string): boolean =>
       mensagem.startsWith(prefixo, posicao),
+    );
+  }
+
+  private obterPosicaoDelimitador(
+    mensagem: string,
+    delimitador: string,
+    posicaoInicial: number,
+  ): number {
+    let posicaoDelimitador = mensagem.indexOf(delimitador, posicaoInicial);
+
+    while (
+      posicaoDelimitador !== -1 &&
+      !this.posicaoDelimitadorEstaAlinhada(posicaoDelimitador)
+    ) {
+      posicaoDelimitador = mensagem.indexOf(delimitador, posicaoDelimitador + 1);
+    }
+
+    return posicaoDelimitador;
+  }
+
+  private posicaoDelimitadorEstaAlinhada(posicao: number): boolean {
+    return (
+      this.servidorTCPConfig.codificacaoMsg !== CodificacaoMsg.HEX ||
+      posicao % 2 === 0
     );
   }
 
