@@ -35,9 +35,9 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ServidorTcp = void 0;
 const microservices_1 = require("@nestjs/microservices");
-const enums_1 = require("../../enums");
-const ctx_host_1 = require("../ctx-host");
 const separar_mensagens_1 = require("./separar-mensagens");
+const ctx_host_1 = require("../ctx-host");
+const enums_1 = require("../../enums");
 const Net = __importStar(require("node:net"));
 class ServidorTcp extends microservices_1.Server {
     static conexoesTcp = new Map();
@@ -121,8 +121,15 @@ class ServidorTcp extends microservices_1.Server {
             if (!this.conexoesAtivas.has(socket)) {
                 return;
             }
+            this.registrarMensagemBrutaRecebida(mensagemSeparada.mensagemBruta);
             await this.processarMensagemComTratamento(socket, mensagemSeparada);
         }
+    }
+    registrarMensagemBrutaRecebida(mensagemBruta) {
+        if (this.configuracao.exibirMensagensBrutasRecebidas !== true) {
+            return;
+        }
+        this.configuracao.tratarErro.log(`RASTREADOR RECEBIDO: ${mensagemBruta}`);
     }
     async processarMensagemComTratamento(socket, mensagemSeparada) {
         try {

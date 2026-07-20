@@ -20,6 +20,7 @@ export declare class ServidorTcp extends Server implements CustomTransportStrate
     private mensagem;
     private enfileirarProcessamento;
     private processarDadosRecebidos;
+    private registrarMensagemBrutaRecebida;
     private processarMensagemComTratamento;
     private processarMensagem;
     private criarContexto;

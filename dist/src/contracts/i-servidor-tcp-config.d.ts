@@ -11,4 +11,5 @@ export interface IServidorTCPConfig {
     prefixo?: string | string[];
     sufixo?: string;
     codificacaoMsg: CodificacaoMsg;
+    exibirMensagensBrutasRecebidas?: boolean;
 }

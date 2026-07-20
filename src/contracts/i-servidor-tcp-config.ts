@@ -60,4 +60,10 @@ export interface IServidorTCPConfig {
    * se estão em ascii ou hex.
    */
   codificacaoMsg: CodificacaoMsg;
+
+  /**
+   * Quando verdadeiro, registra no logger configurado cada quadro completo
+   * recebido do rastreador, na codificação definida em codificacaoMsg.
+   */
+  exibirMensagensBrutasRecebidas?: boolean;
 }
