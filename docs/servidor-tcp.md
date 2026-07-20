@@ -62,8 +62,31 @@ bootstrap();
 | `servidor.port` | `number` | Sim | Porta do servidor |
 | `tratarErro` | `LoggerService` | Sim | Logger para tratamento de erros |
 | `codificacaoMsg` | `CodificacaoMsg` | Sim | Codificação das mensagens (`ascii` ou `hex`) |
+| `exibirMensagensBrutasRecebidas` | `boolean` | Não | Quando `true`, registra cada quadro TCP completo recebido pelo logger configurado; o padrão é `false` |
 | `prefixo` | `string \| string[]` | Não | Prefixo ou prefixos alternativos para identificar início das mensagens; vazio equivale a não configurado |
 | `sufixo` | `string` | Não | Sufixo para identificar fim das mensagens; vazio equivale a não configurado |
+
+### Exibição de mensagens brutas
+
+Para visualizar cada quadro completo recebido do rastreador, a integração pode definir a seguinte variável de ambiente:
+
+```env
+EXIBIR_MENSAGENS_BRUTAS_RASTREADOR=true
+```
+
+Converta a variável para booleano ao criar o servidor:
+
+```typescript
+const exibirMensagensBrutasRecebidas =
+  configService.get<string>('EXIBIR_MENSAGENS_BRUTAS_RASTREADOR') === 'true';
+
+new ServidorTcp({
+  // demais configurações
+  exibirMensagensBrutasRecebidas,
+});
+```
+
+Quando ativa, a opção usa `tratarErro.log()` para registrar uma linha por quadro completo. Em `CodificacaoMsg.ASCII`, a mensagem preserva caixa e terminadores; em `CodificacaoMsg.HEX`, ela é exibida em hexadecimal. Como o conteúdo pode incluir IMEI, localização e outros dados sensíveis, mantenha a opção desativada fora de diagnósticos controlados.
 
 ### Métodos Principais
 

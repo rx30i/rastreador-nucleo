@@ -650,6 +650,138 @@ describe('ServidorTcp', () => {
     });
   });
 
+  describe('exibicao de mensagens brutas recebidas', () => {
+    it('nao deve registrar a mensagem quando a opcao nao for informada', async () => {
+      const logger = new Logger();
+      const registrarMensagem = jest.spyOn(logger, 'log').mockImplementation();
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg: CodificacaoMsg.ASCII,
+        deserializer  : new DeserializerSuntechMock(),
+        prefixo       : ['STT', 'ASTT'],
+        tratarErro    : logger,
+      }));
+      const socketMock = criarSocketMock();
+      servidorTcp.addHandler('suntech', jest.fn(), true);
+
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+      obterCallbackDados(socketMock)(Buffer.from('ASTT;1\r', 'ascii'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(registrarMensagem).not.toHaveBeenCalled();
+    });
+
+    it('nao deve registrar a mensagem quando a opcao for falsa', async () => {
+      const logger = new Logger();
+      const registrarMensagem = jest.spyOn(logger, 'log').mockImplementation();
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg                : CodificacaoMsg.ASCII,
+        deserializer                  : new DeserializerSuntechMock(),
+        exibirMensagensBrutasRecebidas: false,
+        prefixo                       : ['STT', 'ASTT'],
+        tratarErro                    : logger,
+      }));
+      const socketMock = criarSocketMock();
+      servidorTcp.addHandler('suntech', jest.fn(), true);
+
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+      obterCallbackDados(socketMock)(Buffer.from('ASTT;1\r', 'ascii'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(registrarMensagem).not.toHaveBeenCalled();
+    });
+
+    it('deve registrar a mensagem ASCII bruta com caixa e terminador originais', async () => {
+      const logger = new Logger();
+      const registrarMensagem = jest.spyOn(logger, 'log').mockImplementation();
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg                : CodificacaoMsg.ASCII,
+        deserializer                  : new DeserializerSuntechMock(),
+        exibirMensagensBrutasRecebidas: true,
+        prefixo                       : ['STT', 'ASTT'],
+        tratarErro                    : logger,
+      }));
+      const socketMock = criarSocketMock();
+      servidorTcp.addHandler('suntech', jest.fn(), true);
+
+      const mensagemBruta = 'ASTT;Mensagem Original\r';
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+      obterCallbackDados(socketMock)(Buffer.from(mensagemBruta, 'ascii'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(registrarMensagem).toHaveBeenCalledTimes(1);
+      expect(registrarMensagem).toHaveBeenCalledWith(
+        `RASTREADOR RECEBIDO: ${mensagemBruta}`,
+      );
+    });
+
+    it('deve registrar cada quadro hexadecimal concatenado separadamente', async () => {
+      const logger = new Logger();
+      const registrarMensagem = jest.spyOn(logger, 'log').mockImplementation();
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg                : CodificacaoMsg.HEX,
+        deserializer                  : new DeserializerSuntechMock(),
+        exibirMensagensBrutasRecebidas: true,
+        prefixo                       : ['7878', '7979'],
+        sufixo                        : '0d0a',
+        tratarErro                    : logger,
+      }));
+      const socketMock = criarSocketMock();
+      servidorTcp.addHandler('suntech', jest.fn(), true);
+
+      const primeiroQuadro = '787801020d0a';
+      const segundoQuadro = '797903040d0a';
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+      obterCallbackDados(socketMock)(Buffer.from(`${primeiroQuadro}${segundoQuadro}`, 'hex'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(registrarMensagem).toHaveBeenCalledTimes(2);
+      expect(registrarMensagem).toHaveBeenNthCalledWith(
+        1,
+        `RASTREADOR RECEBIDO: ${primeiroQuadro}`,
+      );
+      expect(registrarMensagem).toHaveBeenNthCalledWith(
+        2,
+        `RASTREADOR RECEBIDO: ${segundoQuadro}`,
+      );
+    });
+
+    it('deve registrar quadro fragmentado somente depois de completo', async () => {
+      const logger = new Logger();
+      const registrarMensagem = jest.spyOn(logger, 'log').mockImplementation();
+      servidorTcp = new ServidorTcp(criarConfiguracao({
+        codificacaoMsg                : CodificacaoMsg.HEX,
+        deserializer                  : new DeserializerSuntechMock(),
+        exibirMensagensBrutasRecebidas: true,
+        prefixo                       : ['7878', '7979'],
+        sufixo                        : '0d0a',
+        tratarErro                    : logger,
+      }));
+      const socketMock = criarSocketMock();
+      servidorTcp.addHandler('suntech', jest.fn(), true);
+
+      const quadro = '787801020d0a';
+      const servidor = servidorTcp as unknown as { mensagem: (socket: ISocket) => void };
+      servidor.mensagem(socketMock);
+      const callbackDados = obterCallbackDados(socketMock);
+      callbackDados(Buffer.from(quadro.slice(0, -4), 'hex'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(registrarMensagem).not.toHaveBeenCalled();
+
+      callbackDados(Buffer.from(quadro.slice(-4), 'hex'));
+      await aguardarProcessamentoAssincrono();
+
+      expect(registrarMensagem).toHaveBeenCalledTimes(1);
+      expect(registrarMensagem).toHaveBeenCalledWith(
+        `RASTREADOR RECEBIDO: ${quadro}`,
+      );
+    });
+  });
+
   describe('mensagem com prefixo e sufixo distintos', () => {
     beforeEach(() => {
       servidorTcp = new ServidorTcp(criarConfiguracao({

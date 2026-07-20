@@ -151,8 +151,19 @@ export class ServidorTcp extends Server implements CustomTransportStrategy {
         return;
       }
 
+      this.registrarMensagemBrutaRecebida(mensagemSeparada.mensagemBruta);
       await this.processarMensagemComTratamento(socket, mensagemSeparada);
     }
+  }
+
+  private registrarMensagemBrutaRecebida(mensagemBruta: string): void {
+    if (this.configuracao.exibirMensagensBrutasRecebidas !== true) {
+      return;
+    }
+
+    this.configuracao.tratarErro.log(
+      `RASTREADOR RECEBIDO: ${mensagemBruta}`,
+    );
   }
 
   private async processarMensagemComTratamento(
