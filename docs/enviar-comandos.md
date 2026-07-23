@@ -199,6 +199,23 @@ Decodifica a mensagem do RabbitMQ para um objeto `ComandoUsuarioEntity`.
 
 **Retorno:** `ComandoUsuarioEntity | undefined`
 
+### `rejeitarComandoInvalido(mensagem, comandoUsuario?)`
+
+Encerra sem retry um comando que não pode ser convertido para o protocolo específico do rastreador.
+
+| Parâmetro         | Tipo                               | Descrição                                             |
+|-------------------|------------------------------------|-------------------------------------------------------|
+| `mensagem`        | `ConsumeMessage`                   | Mensagem original do RabbitMQ                         |
+| `comandoUsuario`  | `ComandoUsuarioEntity | undefined` | Contrato base decodificado, quando estiver disponível |
+
+**Comportamento:**
+- Não procura conexão nem escreve no socket
+- Não aplica `nack` nem envia o comando para a fila de pausa
+- Publica `COMANDO/erro` quando `comandoUsuario` estiver disponível
+- Publica o payload original em `rastreador.erro`
+- Confirma a mensagem com `ack`
+- Registra somente a causa da rejeição, sem expor o corpo completo do comando
+
 ## Tratamento de Erros
 
 ### Canal Indisponível
@@ -209,11 +226,18 @@ Se o canal RabbitMQ não estiver disponível, o serviço lança um erro:
 Error: Canal RabbitMQ não está disponível. Verifique a conexão.
 ```
 
-### Mensagem Inválida
+### Payload Estruturalmente Inválido
 
-Se a mensagem não puder ser decodificada ou os dados forem inválidos:
+Se a mensagem não puder ser decodificada no contrato base:
 - A mensagem é confirmada (ack) e removida da fila
 - A mensagem é publicada na fila `rastreador.erro` para análise
+
+### Comando Semanticamente Inválido
+
+Se o contrato base for válido, mas o comando não puder ser convertido para o protocolo do rastreador:
+- O status `COMANDO/erro` é publicado em `rastreador.mensagem`
+- O payload original é publicado em `rastreador.erro`
+- A mensagem é confirmada (ack), sem retry
 
 ### Rastreador Desconectado
 

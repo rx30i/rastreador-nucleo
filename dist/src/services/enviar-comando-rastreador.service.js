@@ -43,13 +43,11 @@ class EnviarComandoRastreadorService {
     }
     enviarComando(mensagem, comando) {
         const comandoEntity = this.decodificarMsg(mensagem);
+        if (comandoEntity === undefined) {
+            this.rejeitarComandoInvalido(mensagem);
+            return undefined;
+        }
         try {
-            if (comandoEntity === undefined) {
-                const canal = this.obterCanal();
-                canal.ack(mensagem, false);
-                canal.publish('amq.direct', 'rastreador.erro', mensagem.content);
-                return undefined;
-            }
             const socket = transport_1.ServidorTcp.obterConexao(comandoEntity.imei);
             const resposta = socket?.write(comando);
             if (resposta === true) {
@@ -65,6 +63,16 @@ class EnviarComandoRastreadorService {
             this.naoPodeSerEnviada(false, mensagem, comandoEntity);
             this.logger.error(erro);
         }
+    }
+    rejeitarComandoInvalido(mensagem, comandoUsuario) {
+        this.logger.error('Comando rejeitado por falha de validação do protocolo.');
+        if (comandoUsuario !== undefined) {
+            this.publicarResposta(enums_1.ComandoStatus.Erro, comandoUsuario);
+        }
+        const canal = this.obterCanal();
+        canal.publish('amq.direct', 'rastreador.erro', mensagem.content);
+        canal.ack(mensagem, false);
+        return undefined;
     }
     registrarComandoEnviadoAoRastreador(comandoEntity, comando) {
         this.logger.salvarLogRastreador(comandoEntity.imei, comando.toString('ascii'), 'enviada');

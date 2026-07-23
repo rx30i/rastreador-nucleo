@@ -1,6 +1,7 @@
 import { ConsumeMessage, MessagePropertyHeaders, Channel } from 'amqplib';
 import { EnviarComandoRastreadorService } from './enviar-comando-rastreador.service';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { ComandoUsuarioEntity } from '../entities';
 import { ConfigService } from '@nestjs/config';
 import { ServidorTcp } from '../transport';
 import { ILoger, ISocket } from '../contracts';
@@ -103,6 +104,47 @@ describe('EnviarComandoRastreadorService', () => {
     );
     expect(obterStatusComandoPublicado(canal)).toBe('erro');
   });
+
+  it('deve encerrar comando semanticamente inválido sem retry ou escrita no socket', (): void => {
+    const mensagem: ConsumeMessage = criarMensagemComando('123456789012345');
+    const comandoUsuario: ComandoUsuarioEntity | undefined = servico.decodificarMsg(mensagem);
+    if (comandoUsuario === undefined) {
+      throw new Error('O contrato base do comando de teste deve ser válido.');
+    }
+
+    servico.rejeitarComandoInvalido(mensagem, comandoUsuario);
+
+    expect(canal.ack).toHaveBeenCalledTimes(1);
+    expect(canal.ack).toHaveBeenCalledWith(mensagem, false);
+    expect(canal.nack).not.toHaveBeenCalled();
+    expect(canal.publish).toHaveBeenCalledWith(
+      'amq.direct',
+      'rastreador.erro',
+      mensagem.content,
+    );
+    expect(obterStatusComandoPublicado(canal)).toBe('erro');
+    expect(obterConexao).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      'Comando rejeitado por falha de validação do protocolo.',
+    );
+  });
+
+  it('deve encerrar payload estruturalmente inválido sem publicar status de comando', (): void => {
+    const mensagem: ConsumeMessage = criarMensagemInvalida();
+
+    servico.enviarComando(mensagem, Buffer.from('comando não utilizado', 'utf8'));
+
+    expect(canal.ack).toHaveBeenCalledTimes(1);
+    expect(canal.ack).toHaveBeenCalledWith(mensagem, false);
+    expect(canal.nack).not.toHaveBeenCalled();
+    expect(canal.publish).toHaveBeenCalledTimes(1);
+    expect(canal.publish).toHaveBeenCalledWith(
+      'amq.direct',
+      'rastreador.erro',
+      mensagem.content,
+    );
+    expect(obterConexao).not.toHaveBeenCalled();
+  });
 });
 
 function criarMensagemComando(imei: string, headers: MessagePropertyHeaders = {}): ConsumeMessage {
@@ -118,6 +160,12 @@ function criarMensagemComando(imei: string, headers: MessagePropertyHeaders = {}
     properties: {
       headers,
     },
+  } as ConsumeMessage;
+}
+
+function criarMensagemInvalida(): ConsumeMessage {
+  return {
+    content: Buffer.from('{', 'ascii'),
   } as ConsumeMessage;
 }
 

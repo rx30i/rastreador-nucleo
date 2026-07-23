@@ -93,14 +93,12 @@ export class EnviarComandoRastreadorService {
    */
   public enviarComando(mensagem: ConsumeMessage, comando: Buffer): undefined {
     const comandoEntity = this.decodificarMsg(mensagem);
-    try {
-      if (comandoEntity === undefined) {
-        const canal = this.obterCanal();
-        canal.ack(mensagem, false);
-        canal.publish('amq.direct', 'rastreador.erro', mensagem.content);
-        return undefined;
-      }
+    if (comandoEntity === undefined) {
+      this.rejeitarComandoInvalido(mensagem);
+      return undefined;
+    }
 
+    try {
       const socket   = ServidorTcp.obterConexao(comandoEntity.imei);
       const resposta = socket?.write(comando);
       if (resposta === true) {
@@ -116,6 +114,29 @@ export class EnviarComandoRastreadorService {
       this.naoPodeSerEnviada(false, mensagem, comandoEntity);
       this.logger.error(erro);
     }
+  }
+
+  /**
+   * Encerra sem retry um comando que não pode ser convertido para o protocolo do rastreador.
+   *
+   * @param {ConsumeMessage} mensagem
+   * @param {ComandoUsuarioEntity} comandoUsuario
+   * @return {undefined}
+   */
+  public rejeitarComandoInvalido(
+    mensagem: ConsumeMessage,
+    comandoUsuario?: ComandoUsuarioEntity,
+  ): undefined {
+    this.logger.error('Comando rejeitado por falha de validação do protocolo.');
+
+    if (comandoUsuario !== undefined) {
+      this.publicarResposta(ComandoStatus.Erro, comandoUsuario);
+    }
+
+    const canal = this.obterCanal();
+    canal.publish('amq.direct', 'rastreador.erro', mensagem.content);
+    canal.ack(mensagem, false);
+    return undefined;
   }
 
   private registrarComandoEnviadoAoRastreador(comandoEntity: ComandoUsuarioEntity, comando: Buffer): void {
